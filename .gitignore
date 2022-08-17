@@ -37,3 +37,11 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+*.Rproj
+*.DS_Store
+
+#additional ignore
+/build/inputs/*
+/build/cache/*
+/analysis/cache/*
+/analysis/outputs/*
