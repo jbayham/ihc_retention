@@ -1,10 +1,7 @@
-<<<<<<< Updated upstream
-# Project Title
+# Interagency Hotshot Crew Retention
 
-Who is involved
+Shayne, Erin, Jude
 
-Short description of the project goals
-Shayne
 # To Do 
 
 
