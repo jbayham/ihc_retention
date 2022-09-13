@@ -6,7 +6,7 @@
 # filter PRD data and calculate basic statistics 
 
 # Filepath to personnel retention data (only interested in IHC for this project)
-filepathPRD <- "C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\Personnel Retentaion data 2008 to 2019 IHCs only.csv"
+filepathPRD <- "./build/inputs/Personnel Retentaion data 2008 to 2019 IHCs only.csv"
 
 # read and filter personal retention data
 # select only "IHC" and res and crew ideas greater than 0
@@ -88,7 +88,7 @@ dataPRD <- dataPRD%>%dplyr::arrange(res_id,year)%>%dplyr::group_by(res_id)%>%dpl
 remove <- c("maxyear","minyear","TOTALDAYS","TOTALYEARS","AveDAYPerYEARS")
 rm(list = remove)
 
-saveRDS(dataPRD, file = "C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\cache\\PRD_IHC.rds")
+saveRDS(dataPRD, file = "/build/cache/PRD_IHC.rds")
 
 remove <- c("dataPRD","filepathPRD","remove")
 rm(list = remove)

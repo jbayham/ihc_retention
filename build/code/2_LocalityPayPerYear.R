@@ -8,26 +8,25 @@
 # Manually copied data from this website:
 # https://www.federalpay.org/gs/locality
 
-# saved to C:/IHC/LocalityPay[year].txt
 # each year file contains an area (the joining column) 
 # and locality adjustment percent for each year
 
 # Run for each year 
-LocPay2008 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2008.txt", sep="\t", header = FALSE)
-LocPay2009 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2009.txt", sep="\t", header = FALSE)
-LocPay2010 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2010.txt", sep="\t", header = FALSE)
-LocPay2011 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2011.txt", sep="\t", header = FALSE)
-LocPay2012 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2012.txt", sep="\t", header = FALSE)
-LocPay2013 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2013.txt", sep="\t", header = FALSE)
-LocPay2014 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2014.txt", sep="\t", header = FALSE)
-LocPay2015 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2015.txt", sep="\t", header = FALSE)
-LocPay2016 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2016.txt", sep="\t", header = FALSE)
-LocPay2017 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2017.txt", sep="\t", header = FALSE)
-LocPay2018 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2018.txt", sep="\t", header = FALSE)
-LocPay2019 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2019.txt", sep="\t", header = FALSE)
-LocPay2020 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2020.txt", sep="\t", header = FALSE)
-LocPay2021 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2021.txt", sep="\t", header = FALSE)
-LocPay2022 <- read.csv("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\LocalityPay2022.txt", sep="\t", header = FALSE)
+LocPay2008 <- read.csv("./build/inputs/LocalityPay2008.txt", sep="\t", header = FALSE)
+LocPay2009 <- read.csv("./build/inputs/LocalityPay2009.txt", sep="\t", header = FALSE)
+LocPay2010 <- read.csv("./build/inputs/LocalityPay2010.txt", sep="\t", header = FALSE)
+LocPay2011 <- read.csv("./build/inputs/LocalityPay2011.txt", sep="\t", header = FALSE)
+LocPay2012 <- read.csv("./build/inputs/LocalityPay2012.txt", sep="\t", header = FALSE)
+LocPay2013 <- read.csv("./build/inputs/LocalityPay2013.txt", sep="\t", header = FALSE)
+LocPay2014 <- read.csv("./build/inputs/LocalityPay2014.txt", sep="\t", header = FALSE)
+LocPay2015 <- read.csv("./build/inputs/LocalityPay2015.txt", sep="\t", header = FALSE)
+LocPay2016 <- read.csv("./build/inputs/LocalityPay2016.txt", sep="\t", header = FALSE)
+LocPay2017 <- read.csv("./build/inputs/LocalityPay2017.txt", sep="\t", header = FALSE)
+LocPay2018 <- read.csv("./build/inputs/LocalityPay2018.txt", sep="\t", header = FALSE)
+LocPay2019 <- read.csv("./build/inputs/LocalityPay2019.txt", sep="\t", header = FALSE)
+LocPay2020 <- read.csv("./build/inputs/LocalityPay2020.txt", sep="\t", header = FALSE)
+LocPay2021 <- read.csv("./build/inputs/LocalityPay2021.txt", sep="\t", header = FALSE)
+LocPay2022 <- read.csv("./build/inputs/LocalityPay2022.txt", sep="\t", header = FALSE)
 
 
 # this is to make a table to join
@@ -60,10 +59,10 @@ rm(list = remove)
 # ~ a locality payment per area per year
 colnames(LocPayALL) <- c('area1', 'area2', 'code','LocoAdj','year')
 # remove % and convert to numeric 
-LocPayALL$LocoAdj<-gsub("\\$|%","",LocPayALL$LocoAdj)
+LocPayALL$LocoAdj<-gsub("/$|%","",LocPayALL$LocoAdj)
 LocPayALL$LocoAdj <- as.numeric(LocPayALL$LocoAdj)
 
-saveRDS(LocPayALL, file = "C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\cache\\LocPayALL.rds")
+saveRDS(LocPayALL, file = "./build/cache/LocPayALL.rds")
 
 remove <- c("LocPayALL","remove")
 rm(list = remove)

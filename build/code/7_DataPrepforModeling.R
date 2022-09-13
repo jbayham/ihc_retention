@@ -6,7 +6,7 @@
 # 
 #library(dplyr)
 
-sm_data <- read.csv(file = "C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\cache\\dataPRD_wIncomeBin.csv") %>%
+sm_data <- read.csv(file = "./build/cache/dataPRD_wIncomeBin.csv") %>%
   janitor::clean_names()
 
 # for survival model -From Jude (start year/end year)
@@ -46,6 +46,8 @@ dataset$AverageDaysAssignedROUND <- base::factor(dataset$AverageDaysAssignedROUN
 dataset$days_assigned <- plyr::round_any(dataset$days_assigned, 10, f = ceiling)
 dataset <- dataset[dataset$days_assigned<160,]
 
+dataset$med_wageCOPY <- dataset$med_wage
+
 # round cumulative days to nearest 100 and remove <1100 cumulative days
 # it is one sample and causes the model to fail
 dataset$cumulativedaysROUND <- plyr::round_any(dataset$cumusum_da, 100, f = floor)  
@@ -73,7 +75,7 @@ dataset$total_years <- factor(dataset$total_years)
 
 
 
-saveRDS(dataset, file = "C:\\Users\\magst\\Desktop\\git\\ihc_retention\\analysis\\inputs\\dataPRD_dataforModeling.rds")
+saveRDS(dataset, file = "./analysis/inputs/dataPRD_dataforModeling.rds")
 
 remove <- c("sm_data","remove","dataset")
 rm(list = remove)
