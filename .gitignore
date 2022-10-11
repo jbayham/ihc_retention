@@ -41,7 +41,7 @@ vignettes/*.pdf
 *.DS_Store
 
 #additional ignore
-/build/inputs/*
-/build/cache/*
-/analysis/cache/*
-/analysis/outputs/*
+/build/inputs
+/build/cache
+/analysis/cache
+/analysis/outputs
