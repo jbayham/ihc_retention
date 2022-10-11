@@ -43,5 +43,6 @@ vignettes/*.pdf
 #additional ignore
 /build/inputs
 /build/cache
+/analysis/inputs
 /analysis/cache
 /analysis/outputs

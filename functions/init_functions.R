@@ -117,7 +117,7 @@ folder.setup <- function(){
   folder.list <- c("build/code",
                    "build/cache",
                    "build/inputs",
-                   #"analysis/inputs",
+                   "analysis/inputs",
                    "analysis/code",
                    "analysis/cache",
                    "analysis/outputs")

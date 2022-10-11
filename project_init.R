@@ -7,7 +7,7 @@ source("functions/init_functions.R")
 
 #Loading and installing packages
 library(pacman)
-p_load(tidyverse,readxl,sf,mapview,janitor,missForest)
+p_load(tidyverse,readxl,sf,mapview,janitor,missForest,cartography)
 
 
 #Setting package::function priority with conflicted package
