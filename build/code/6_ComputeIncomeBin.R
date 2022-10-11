@@ -3,9 +3,9 @@
 # (6) To compute income bin for each year ######################################
 ################################################################################
 ################################################################################
-library(cartography)
+#library(cartography)
 
-dataPRD3 <- readRDS(file = "./build/cache/dataPRD_wSURV.rds")
+dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSURV.rds")
 
 # for each year
 dataPRD2012 <- dataPRD3[dataPRD3$year==2012,]
@@ -140,7 +140,7 @@ rm(list = remove)
 remove <- c("breaks2012","breaks2013","breaks2014","breaks2015","breaks2016","breaks2017","breaks2018","breaks2019")
 rm(list = remove)
 
-write.csv(dataPRD4, file = "./build/cache/dataPRD_wIncomeBin.csv")
+write.csv(dataPRD4, file = "build/cache/dataPRD_wIncomeBin.csv")
 
 remove <- c("dataPRD4","remove", "dataPRD3", "df_list")
 rm(list = remove)

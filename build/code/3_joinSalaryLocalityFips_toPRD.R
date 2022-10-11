@@ -3,25 +3,25 @@
 # (3) Join data ~ Left join salary~fips/area~locality adjustment to dataPRD ####
 ################################################################################
 ################################################################################
-library(dplyr)
-dataPRD <- readRDS(file = "./build/cache/PRD_IHC.rds")
+#library(dplyr)
+dataPRD <- readRDS(file = "build/cache/PRD_IHC.rds")
 
 # Contains salary data by crew by year (res_id_primary and year are the joining columns)
-filepathSalary <- "./build/inputs/IHC_salary_estimates.csv"
+filepathSalary <- "build/inputs/IHC_salary_estimates.csv"
 
 # Contains fips codes (code) and area name (area1) PER year (year)
-fileFIPSandCode <- "./build/inputs/FIPScodeandNames.txt"
+fileFIPSandCode <- "build/inputs/FIPScodeandNames.txt"
 
 # Contains fips and crew level res_id
-filepathFIPS <- "./build/inputs/IHC_home_base_locations_wFIPS.txt"
+filepathFIPS <- "build/inputs/IHC_home_base_locations_wFIPS.txt"
 
 # Contains competing wages (from Jude)
-filepathCompetingWages <- "./build/inputs/hb_occ.csv"
+filepathCompetingWages <- "build/inputs/hb_occ.csv"
 
 # salary data (crew level)
 dataSalary <- read.csv(filepathSalary)
 
-LocPayALL <- readRDS("./build/cache/LocPayALL.rds")
+LocPayALL <- readRDS("build/cache/LocPayALL.rds")
 
 # ALL FIPS codes for each area name
 dataFIPSandCodes <- read.csv(fileFIPSandCode,sep="\t",header=TRUE)
@@ -109,7 +109,7 @@ any(is.na(dataPRD$med_wage))
 sum(is.na(dataPRD$med_wage))
 length(unique(dataPRD$res_id))
 
-saveRDS(dataPRD, file = "./build/cache/dataPRD_join.rds")
+saveRDS(dataPRD, file = "build/cache/dataPRD_join.rds")
 
 remove <- c("dataCompetingWages","dataFIPS","dataFIPSandCodes","dataPRD","dataSalary","LocPayALL",
             "fileFIPSandCode","filepathCompetingWages","filepathFIPS","filepathSalary","i","remove")

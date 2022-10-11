@@ -6,7 +6,7 @@
 # 
 #library(dplyr)
 
-sm_data <- read.csv(file = "./build/cache/dataPRD_wIncomeBin.csv") %>%
+sm_data <- read.csv(file = "build/cache/dataPRD_wIncomeBin.csv") %>%
   janitor::clean_names()
 
 # for survival model -From Jude (start year/end year)
@@ -75,7 +75,7 @@ dataset$total_years <- factor(dataset$total_years)
 
 
 
-saveRDS(dataset, file = "./analysis/inputs/dataPRD_dataforModeling.rds")
+saveRDS(dataset, file = "analysis/inputs/dataPRD_dataforModeling.rds")
 
 remove <- c("sm_data","remove","dataset")
 rm(list = remove)
