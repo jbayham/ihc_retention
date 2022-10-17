@@ -7,7 +7,7 @@
 
 # Filepath to personnel retention data (only interested in IHC for this project)
 filepathPRD <- "./build/inputs/Personnel Retentaion data 2008 to 2019 IHCs only.csv"
-
+#filepathPRD <- "C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\Personnel Retentaion data 2008 to 2019 IHCs only.csv"
 # read and filter personal retention data
 # select only "IHC" and res and crew ideas greater than 0
 # select IHC where days assigned >28
@@ -84,11 +84,34 @@ dataPRD <- dataPRD%>%dplyr::arrange(res_id,year)%>%dplyr::group_by(res_id)%>%dpl
 #dataPRD <- dataPRD%>%dplyr::arrange(res_id,year)%>%dplyr::group_by(res_id)%>%dplyr::mutate(cumusumSFF=cumsum(SeniorFFxLoc))
 #dataPRD <- dataPRD%>%dplyr::arrange(res_id,year)%>%dplyr::group_by(res_id)%>%dplyr::mutate(cumusumTH=cumsum(total_hours))
 
+### 9/20/2022 ###
+# final exit 
+dataPRD["surv"] <- ifelse(dataPRD$lastYear==dataPRD$year,"1","0")
+
+# 
+dataPRD <- dataPRD %>%
+  group_by(res_id) %>%
+  arrange(year, .by_group = TRUE) %>%
+  mutate(yearminusyear = lead(year,k=1, default = first(year)) - year)
+
+dataPRD$residDIFF <- ave(dataPRD$res_id, FUN = function(x) c(diff(x),0))
+
+dataPRD$skipyear <- ifelse(dataPRD$yearminusyear>1 & dataPRD$residDIFF==0,1,0)
+
+dataPRD$skipyear <- as.numeric(dataPRD$skipyear)
+
+dataPRD$surv <- as.numeric(dataPRD$surv)
+
+dataPRD$surv2 <- dataPRD$skipyear+dataPRD$surv
+
+### end 9/20/2022 ###
+
+
 # clean global environments
 remove <- c("maxyear","minyear","TOTALDAYS","TOTALYEARS","AveDAYPerYEARS")
 rm(list = remove)
 
-saveRDS(dataPRD, file = "/build/cache/PRD_IHC.rds")
+saveRDS(dataPRD, file = "./build/cache/PRD_IHC.rds")
 
 remove <- c("dataPRD","filepathPRD","remove")
 rm(list = remove)

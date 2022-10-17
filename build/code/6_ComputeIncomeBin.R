@@ -5,7 +5,8 @@
 ################################################################################
 library(cartography)
 
-dataPRD3 <- readRDS(file = "./build/cache/dataPRD_wSURV.rds")
+#dataPRD3 <- readRDS(file = "./build/cache/dataPRD_wSURV.rds")
+dataPRD3 <- readRDS(file = "./build/cache/dataPRD_wSalary.rds")
 
 # for each year
 dataPRD2012 <- dataPRD3[dataPRD3$year==2012,]

@@ -17,16 +17,16 @@ dataset <- sm_data
 ###
 ##
 # this is to compute the surv for multiple exits and entries 
-dataset <- dataset %>%
-  group_by(res_id) %>%
-  arrange(year, .by_group = TRUE) %>%
-  mutate(yearminusyear = lead(year,k=1, default = first(year)) - year)
+#dataset <- dataset %>%
+#  group_by(res_id) %>%
+#  arrange(year, .by_group = TRUE) %>%
+#  mutate(yearminusyear = lead(year,k=1, default = first(year)) - year)
 
-dataset$residDIFF <- ave(dataset$res_id, FUN = function(x) c(diff(x),0))
+#dataset$residDIFF <- ave(dataset$res_id, FUN = function(x) c(diff(x),0))
 
-dataset$skipyear <- ifelse(dataset$yearminusyear>1 & dataset$residDIFF==0,1,0)
+#dataset$skipyear <- ifelse(dataset$yearminusyear>1 & dataset$residDIFF==0,1,0)
 
-dataset$surv2 <- dataset$skipyear+dataset$surv
+#dataset$surv2 <- dataset$skipyear+dataset$surv
 #
 ##
 ###
@@ -70,6 +70,32 @@ dataset$CompetingWage <- factor(dataset$med_wage)
 dataset$cumusum_year <- factor(dataset$cumusum_year, levels=c('11','10','9','8','7','6','5','4','3','2','1'))
 dataset$total_years <- factor(dataset$total_years)
 
+
+dataset$WageDifference <- dataset$med_wageCOPY-dataset$senior_f_fx_loc_copy
+dataset$WageDifference2 <- plyr::round_any(dataset$WageDifference, 5000, f = ceiling) 
+
+#dataset$WageDifference <- factor(dataset$WageDifference, levels=c("0","-30000","-20000","-10000","10000","20000","30000","40000","50000","60000"))
+
+dataset$WageDifference2 <- factor(dataset$WageDifference2, levels=c("0","-30000","-25000","-20000","-15000","-10000","-5000","5000","10000","15000","20000","25000","30000","35000","40000","45000","50000","55000"))
+
+#dataset$cumusum_year <- as.numeric(dataset$cumusum_year)
+
+#dataset<- dataset[dataset$cumusum_year<11,]
+
+#dataset$CumulativeYears <- factor(dataset$cumusum_year, levels = c("1","2","3","4","5","6","7","8","9","10","11"))
+
+dataset$CumulativeExperience <- dataset$CumulativeDays
+
+dataset$CompetingWageDifference <- dataset$WageDifference2
+#dataset$CompetingWageDifference <- dataset$WageDifference
+
+
+dataset$CompetingWage <- plyr::round_any(dataset$med_wageCOPY, 10000, f = ceiling)
+
+dataset$CompetingWage <- as.factor(dataset$CompetingWage)
+
+#dataset$Wage <- plyr::round_any(dataset$senior_f_fx_loc_copy, 5000, f = ceiling) 
+#dataset$Wage <- as.factor(dataset$Wage)
 #table(dataset$GACC)
 #table(dataset$Agency)
 
