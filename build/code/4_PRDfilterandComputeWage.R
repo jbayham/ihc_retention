@@ -5,7 +5,7 @@
 ################################################################################
 #####
 
-dataPRD <- readRDS(file = "./build/cache/dataPRD_join.rds")
+dataPRD <- readRDS(file = "build/cache/dataPRD_join.rds")
 
 # remove nas from est_annual_pay_OPM_base_rate_senior_FF column and med_wage
 dataPRD2 <- dataPRD[!is.na(dataPRD$med_wage)&!is.na(dataPRD$est_annual_pay_OPM_base_rate_senior_FF), ]
@@ -47,7 +47,7 @@ unique(dataPRD2$est_annual_pay_OPM_base_rate_senior_FF)
 # make a copy of Senior FF column
 dataPRD2$SeniorFFxLocCOPY <- dataPRD2$SeniorFFxLoc
 
-saveRDS(dataPRD2, file = "./build/cache/dataPRD_wSalary.rds")
+saveRDS(dataPRD2, file = "build/cache/dataPRD_wSalary.rds")
 
 remove <- c("dataPRD","dataPRD2","remove")
 rm(list = remove)

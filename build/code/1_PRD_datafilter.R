@@ -111,7 +111,7 @@ dataPRD$surv2 <- dataPRD$skipyear+dataPRD$surv
 remove <- c("maxyear","minyear","TOTALDAYS","TOTALYEARS","AveDAYPerYEARS")
 rm(list = remove)
 
-saveRDS(dataPRD, file = "./build/cache/PRD_IHC.rds")
+saveRDS(dataPRD, file = "build/cache/PRD_IHC.rds")
 
 remove <- c("dataPRD","filepathPRD","remove")
 rm(list = remove)
