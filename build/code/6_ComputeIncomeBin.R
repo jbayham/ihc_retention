@@ -7,6 +7,7 @@
 
 dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSURV.rds")
 
+
 # for each year
 dataPRD2012 <- dataPRD3[dataPRD3$year==2012,]
 breaks2012 <- getBreaks(dataPRD2012$SeniorFFxLoc, nclass=10, method = "quantile")

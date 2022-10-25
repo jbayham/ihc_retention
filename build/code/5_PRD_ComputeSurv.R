@@ -6,14 +6,16 @@
 
 # https://cran.r-project.org/web/packages/survival/vignettes/timedep.pdf
 # data for time dependent covariates
+
 dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSalary.rds")
 
-dataPRD3["surv"] <- ifelse(dataPRD3$lastYear==dataPRD3$year,"1","0")
+#dataPRD3["surv"] <- ifelse(dataPRD3$lastYear==dataPRD3$year,"1","0")
 
 saveRDS(dataPRD3, file = "build/cache/dataPRD_wSURV.rds")
 
-remove <- c("dataPRD3","remove")
-rm(list = remove)
+
+#remove <- c("dataPRD3","remove")
+#rm(list = remove)
 
 ################################################################################
 ################################################################################
