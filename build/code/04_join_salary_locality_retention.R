@@ -16,7 +16,7 @@ fileFIPSandCode <- "build/inputs/FIPScodeandNames.txt"
 filepathFIPS <- "build/inputs/IHC_home_base_locations_wFIPS.txt"
 
 # Contains competing wages (from Jude)
-filepathCompetingWages <- "build/inputs/hb_occ.csv"
+filepathCompetingWages <- "build/cache/hb_occ.csv"
 
 # salary data (crew level)
 dataSalary <- read.csv(filepathSalary)

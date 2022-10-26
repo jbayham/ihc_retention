@@ -6,14 +6,15 @@
 flist <- dir("build/inputs/bls/",pattern = ".xlsx")
 oe_dat <- vector("list",length(flist))
 
-for(i in c(7,8)){ #c(1:3,7,8)
+#Reading in large xlsx files.  There was a structural change in 2017 (i=6) so the read command changed to ensure correct datatype in read.
+for(i in c(1:5)){ 
     #read data
   oe_dat[[i]] <- read_excel(str_c("build/inputs/bls/",flist[i]),sheet = 1,
                             col_types = c(rep("text",9),rep("numeric",20)))
     
 }
 
-for(i in 4:6){
+for(i in c(6:8)){
   #read data
   oe_dat[[i]] <- read_excel(str_c("build/inputs/bls/",flist[i]),sheet = 1,
                             col_types = c(rep("text",10),rep("numeric",20)))
@@ -26,7 +27,7 @@ var_select <- c("area","area_title","area_type","naics","naics_title","own_code"
 merge_dat <- map2_dfr(oe_dat,flist,function(df,y){
   df %>%
     janitor::clean_names() %>%
-    select(var_select,starts_with("a_")) %>%
+    select(all_of(var_select),starts_with("a_")) %>%
     add_column(year=str_extract(y,"[:digit:]{4}")) 
 })
   
@@ -96,6 +97,9 @@ nonmetro_occ_top5 <- occ_subset %>%
   select(-starts_with("a_"))
 
 
+#Join crew homes with cbsa's
+hb_cbsa <- st_join(hb_text,cbsa)
+
 #Join crews that did match with corresponding cbsa areas
 hb_cbsa_metro <- hb_cbsa %>%
   filter(!is.na(geoid)) %>% 
@@ -114,8 +118,6 @@ hb_cbsa_metro$Crew_Name[!(hb_cbsa_metro$Crew_Name %in% unique(hb_metro_occ$Crew_
 unique(hb_metro_occ_top5$Crew_Name)
 
 
-#Join crew homes with cbsa's
-hb_cbsa <- st_join(hb_text,cbsa)
 
 #Join crews that did not match with state nonmetro wages
 hb_cbsa_nonmetro <- hb_cbsa %>%
@@ -149,19 +151,17 @@ write_csv(hb_occ,"build/cache/hb_occ.csv")
 write_csv(hb_occ_top5,"build/cache/hb_occ_top5.csv")
 
 
-hb_occ_imp <- hb_occ %>%
-  #select(med_wage,Crew_Name,year,CNTY_NAME,STATE_NAME) %>%
-  select(med_wage,year,STATE_NAME,Agency,GACC) %>%
-  mutate(across(where(is.character), factor)) %>% 
-  # select(med_wage,Crew_Name,year) %>%
-  # pivot_wider(id_cols = "year",names_from = "Crew_Name",values_from = "med_wage") %>%
-  as.data.frame() %>%
-  #select(10:13) %>%
-  missForest(.,verbose = T) %>%
-  pluck(1)
-
-check <- hb_occ %>%
-  select(med_wage,Crew_Name,year,CNTY_NAME,STATE_NAME) %>%
-  bind_cols(hb_occ_imp)
+###################################
+#Consider imputation of missing values using missforest
+# hb_occ_imp <- hb_occ %>%
+#   select(med_wage,year,STATE_NAME,Agency,GACC) %>%
+#   mutate(across(where(is.character), factor)) %>% 
+#   as.data.frame() %>%
+#   missForest(.,verbose = T) %>%
+#   pluck(1)
+# 
+# check <- hb_occ %>%
+#   select(med_wage,Crew_Name,year,CNTY_NAME,STATE_NAME) %>%
+#   bind_cols(hb_occ_imp)
 
 

@@ -8,9 +8,17 @@
 dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSURV.rds")
 
 
+getSymbols("CPIAUCSL", src='FRED')
+avg_cpi <- apply.yearly(CPIAUCSL, mean) %>%
+  as_tibble(rownames = "measure_date") %>%
+  mutate(year=year(as_date(measure_date))) %>%
+  select(year,cpi=CPIAUCSL) %>%
+  mutate(adj=cpi/cpi[year=2019])
+
+
 # for each year
 dataPRD2012 <- dataPRD3[dataPRD3$year==2012,]
-breaks2012 <- getBreaks(dataPRD2012$SeniorFFxLoc, nclass=10, method = "quantile")
+breaks2012 <- getBreaks(dataPRD2012$SeniorFFxLoc, nclass=10, method = "quantile")  #see gtools::quantcut()
 #plot(breaks2012)
 dataPRD2012$SeniorFFxLoc[dataPRD2012$SeniorFFxLoc >= breaks2012[1] & dataPRD2012$SeniorFFxLoc < breaks2012[2]] <- 0
 dataPRD2012$SeniorFFxLoc[dataPRD2012$SeniorFFxLoc >= breaks2012[2] & dataPRD2012$SeniorFFxLoc < breaks2012[3]] <- 1
@@ -134,6 +142,9 @@ df_list <- list(dataPRD2012,dataPRD2013,dataPRD2014,dataPRD2015,dataPRD2016,data
 
 #merge all data frames in list
 dataPRD4 <- Reduce(function(x, y) merge(x, y, all=TRUE), df_list)
+
+# ggplot(dataPRD4,aes(x=year,y=GSBASExLoc,group=year)) +
+#   geom_boxplot()
 
 # clean the global environments
 remove <- c("dataPRD2012","dataPRD2013","dataPRD2014","dataPRD2015","dataPRD2016","dataPRD2017","dataPRD2018","dataPRD2019")

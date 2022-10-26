@@ -7,14 +7,15 @@ source("functions/init_functions.R")
 
 #Loading and installing packages
 library(pacman)
-p_load(tidyverse,readxl,sf,mapview,janitor,missForest,cartography,
-       survival,survminer,ggforestplot,ggsurvfit,viridis,install = F)
+p_load(tidyverse,lubridate,conflicted,readxl,sf,mapview,janitor,missForest,cartography,
+       survival,survminer,ggforestplot,ggsurvfit,viridis,quantmod,install = F)
 
 
 #Setting package::function priority with conflicted package
 conflict_prefer("filter", "dplyr")
 conflict_prefer("select", "dplyr")
 conflict_prefer("between", "dplyr")
+
 #########################
 #Loading project helper functions (all scripts within folder)
 run.script("functions")
@@ -31,3 +32,7 @@ folder.setup()
 
 
 #dlgMessage("Do you need to pull the repo?")
+
+################################
+#Build dataset
+source("build/code/00_build.R")
