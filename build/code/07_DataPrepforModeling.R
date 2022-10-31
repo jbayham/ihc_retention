@@ -6,7 +6,7 @@
 # 
 #library(dplyr)
 
-sm_data <- read.csv(file = "build/cache/dataPRD_wIncomeBin.csv") %>%
+sm_data <- read.csv(file = "build/cache/prd_deflated_wages.csv") %>%
   janitor::clean_names()
 
 # for survival model -From Jude (start year/end year)
