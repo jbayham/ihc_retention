@@ -55,10 +55,18 @@ dataset <- dataset[dataset$cumulativedaysROUND<800,]
 dataset$cumulativedaysROUND <- factor(dataset$cumulativedaysROUND)
 dataset$year <- base::factor(dataset$year)
 dataset$med_wage <- plyr::round_any(dataset$med_wage, 10000, f = ceiling) 
+# new 11/7/2022
+dataset$real_competing_wage_deflate_round <- plyr::round_any(dataset$real_competing_wage, 10000, f = ceiling) 
+
+
 
 # set factors and organize levels
 dataset$Wage <- dataset$senior_f_fx_loc
 dataset$Wage <- as.factor(dataset$Wage)
+# new 11/7/2022
+dataset$DeflatedWage <- dataset$real_wage
+dataset$DeflatedWage <- as.factor(dataset$DeflatedWage)
+
 dataset$Year <- as.factor(dataset$year)
 dataset$AverageDaysAssigned <- as.factor(dataset$AverageDaysAssignedROUND)
 dataset$GACC <- dataset$gacc_x
@@ -67,16 +75,24 @@ dataset$Agency <- factor(dataset$agency, levels=c('USFS', 'NPS', 'BLM', 'BIA'))
 dataset$CumulativeDays <- dataset$cumulativedaysROUND
 dataset$DaysAssigned <- factor(dataset$days_assigned)
 dataset$CompetingWage <- factor(dataset$med_wage)
+# new 11/7/2022
+dataset$DeflatedCompetingWage <- factor(dataset$real_competing_wage)
 dataset$cumusum_year <- factor(dataset$cumusum_year, levels=c('11','10','9','8','7','6','5','4','3','2','1'))
 dataset$total_years <- factor(dataset$total_years)
 
 
 dataset$WageDifference <- dataset$med_wageCOPY-dataset$senior_f_fx_loc_copy
 dataset$WageDifference2 <- plyr::round_any(dataset$WageDifference, 5000, f = ceiling) 
+# new 11/7/2022
+dataset$WageDifferenceDeflated <- dataset$real_competing_wage-dataset$real_wage
+dataset$WageDifference2Deflated <- plyr::round_any(dataset$WageDifferenceDeflated, 5000, f = ceiling) 
+
 
 #dataset$WageDifference <- factor(dataset$WageDifference, levels=c("0","-30000","-20000","-10000","10000","20000","30000","40000","50000","60000"))
 
 dataset$WageDifference2 <- factor(dataset$WageDifference2, levels=c("0","-30000","-25000","-20000","-15000","-10000","-5000","5000","10000","15000","20000","25000","30000","35000","40000","45000","50000","55000"))
+# new 11/7/2022
+dataset$WageDifference2Deflated <- factor(dataset$WageDifference2Deflated, levels=c("0","-30000","-25000","-20000","-15000","-10000","-5000","5000","10000","15000","20000","25000","30000","35000","40000","45000","50000","55000"))
 
 #dataset$cumusum_year <- as.numeric(dataset$cumusum_year)
 
@@ -87,6 +103,8 @@ dataset$WageDifference2 <- factor(dataset$WageDifference2, levels=c("0","-30000"
 dataset$CumulativeExperience <- dataset$CumulativeDays
 
 dataset$CompetingWageDifference <- dataset$WageDifference2
+dataset$DeflatedCompetingWageDifference <- dataset$WageDifference2Deflated
+
 #dataset$CompetingWageDifference <- dataset$WageDifference
 
 

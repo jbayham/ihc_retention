@@ -6,11 +6,18 @@
 
 library(survival)
 library(survminer)
+
 library(ggforestplot)
 library(ggsurvfit)
 library(viridis)
 
 dataset <- readRDS("./analysis/inputs/dataPRD_dataforModeling.rds")
+
+# Round Deflated Competing Wage
+dataset$DeflatedCompetingWage <- as.numeric(as.character(dataset$DeflatedCompetingWage))
+dataset$DeflatedCompetingWage <- plyr::round_any(dataset$DeflatedCompetingWage, 10000, f = ceiling)
+dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)
+
 
 #### covariate explination ####
 #
@@ -33,17 +40,17 @@ dataset <- readRDS("./analysis/inputs/dataPRD_dataforModeling.rds")
 #
 # dataset$surv2 = each year skipped is also an event (individuals can have multiple events)
 
-# Kaplan-Meier non-parametric ###
+# Kaplan-Meier non-parametric #####
 survfit2(Surv(year_start,year_end,surv2) ~ 1, data = dataset) |>
 ggsurvfit(size = 1) +
   add_confidence_interval() +
-  add_risktable() +
+  #add_risktable() +
   #add_quantile(y_value = 0.6, color = "gray50", size = 0.75) +
   #coord_cartesian(xlim = c(0, 8)) +
 # update figure labels/titles
 labs(
   y = "Percentage Retention",
-  title = "Kaplan-Meier survival estimate of time to resignation",
+  title = " ",
   x = "Total Years as IHC"
 ) +
   scale_y_continuous(label = scales::percent, 
@@ -67,8 +74,10 @@ labs(
 ###
 ##
 #
-# Hazard ratio plots
-model <- coxph(Surv(year_start,year_end,surv2) ~ CompetingWageDifference + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+# Hazard ratio plots #####
+model <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWage + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+#model2 <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWageDifference + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+
 summary(model)
 
 p <- ggforest(model, data = dataset, main = "Hazard Ratio Estimate",
@@ -76,10 +85,63 @@ p <- ggforest(model, data = dataset, main = "Hazard Ratio Estimate",
               fontsize = 0.6,
               refLabel = "reference",
               noDigits = 1,
-              cpositions = c(0.02, 0.18, 0.4))
+              cpositions = c(0.02, 0.18, 0.4))#+
+  #ggforest(model2, data = dataset, main = "Hazard Ratio Estimate",
+           #cpositions = c(0.05, 0.22, 0.4),
+     #      fontsize = 0.6,
+        #   refLabel = "reference",
+         #  noDigits = 1,
+         #  cpositions = c(0.02, 0.18, 0.4))
 p
 #ggsave(plot = p, width = 80, height = 120, dpi = 300, filename = "C:\\Users\\magst\\Desktop\\IHCretention\\Figures\\IHCModelFigures\\CompetingWageDifferenceForestPlot2.jpg")
-dev.off()
+#dev.off()
+
+
+#
+##
+###
+####
+# 
+####
+###
+##
+#
+#
+#dataset$DeflatedCompetingWage <- as.numeric(as.character(dataset$DeflatedCompetingWage))
+#dataset$DeflatedCompetingWage <- plyr::round_any(dataset$DeflatedCompetingWage, 10000, f = ceiling)
+#dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)
+
+
+model <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWage + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+model1 <- tidy(model)
+model1$HazardRatio <- exp(model1$estimate)
+model1$Equation <- "~ Wage+AverageDaysAssigned+Year"
+cbp1 <- gray.colors(10, start = 0.3, end = 0.9, gamma = 2.2, alpha = NULL, rev = FALSE)
+df <- model1
+
+ggforestplot::forestplot(
+  df = df,
+  name = term,
+  estimate = HazardRatio,
+  se = std.error,
+  colour = Equation,
+  fontsize = 10.6,
+  #pvalue = TRUE,
+  xlab = "Hazard Ratio (95% CI)",
+  xlim = c(-.5,3)
+  #cex  = 2,
+  #pallette = cbp1
+  #psignif = 0.2
+  #zero = 9,
+  #logodds = TRUE,
+  #lines = list( # as many parameters as CI
+  #  gpar(lwd = 10), gpar(lwd = 5),
+  #  gpar(), gpar(),
+  #  gpar(lwd = 200), gpar(lwd = 1)
+)+ geom_vline(xintercept = 1)+ geom_vline(xintercept = 3)+
+  guides(colour = guide_legend(override.aes = list(size=5)))+ 
+  geom_vline(xintercept = 2)+  scale_colour_manual(values=cbp1)+
+  theme(legend.position = 'right', legend.direction = "vertical")
 
 #
 ##
@@ -91,6 +153,119 @@ dev.off()
 ##
 #
 # Some draft figures of shifting survival curves based
+dummy <- expand.grid(DeflatedCompetingWage=c(50000,100000), Year=c(2014), DaysAssigned=100, Agency="USFS", CumulativeDays=c(100,700))
+dummy <- data.frame(dummy)
+dummy$DeflatedCompetingWage <- as.factor(dummy$DeflatedCompetingWage)
+dummy$Year <- as.factor(dummy$Year)
+dummy$DaysAssigned <- as.factor(dummy$DaysAssigned)
+dummy$CumulativeDays <- as.factor(dummy$CumulativeDays)
+dataset$DeflatedCompetingWage <- as.numeric(as.character(dataset$DeflatedCompetingWage))
+dataset$DeflatedCompetingWage <- plyr::round_any(dataset$DeflatedCompetingWage, 10000, f = ceiling)
+dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)
+
+model <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWage + Year + DaysAssigned + Agency + CumulativeDays, 
+               data = dataset)
+
+fit <- survfit(model, data = dataset)
+fitdummy <- survfit(model, newdata = dummy)
+
+#p <- ggsurvplot(fit, conf.int = TRUE, 
+#                xlab="Total Years as IHC", 
+#                ylab="Survival probability",
+#                ggtheme = theme_survminer(base_size = 10),
+#                palette = viridis(3),
+#                color = 'strata',
+#                #legend.title="Competing Wage \n(thousands USD)",
+#                legend="bottom",
+#                #legend="none",
+#                #legend.labs = c("30","40","50","60","70","80","90","100","110","120","130","140","150"),
+#                size=1.5,
+#                data = dataset)
+#p
+
+q <- ggsurvplot(fitdummy, 
+                xlim = c(0,11), 
+                break.x.by = 1,
+                conf.int = TRUE, 
+                xlab="Total Years as IHC", 
+                ylab="Survival probability",
+                ggtheme = theme_survminer(base_size = 10),
+                palette = viridis(4),
+                color = 'strata',
+                legend.title="Competing Wage \n(thousands USD)",
+                legend="bottom",
+                #legend="none",
+                #legend.labs = c("50","100"),
+                size=1.5,
+                data = dummy)
+
+q
+
+p+q
+
+
+
+
+
+###
+###
+###
+###
+###
+dummy <- expand.grid(CompetingWage=50000, Year=c(2012,2014,2016,2018), DaysAssigned=100, Agency="USFS", CumulativeDays=100)
+dummy <- data.frame(dummy)
+dummy$CompetingWage <- as.factor(dummy$CompetingWage)
+dummy$Year <- as.factor(dummy$Year)
+dummy$DaysAssigned <- as.factor(dummy$DaysAssigned)
+dummy$CumulativeDays <- as.factor(dummy$CumulativeDays)
+
+
+model <- coxph(Surv(year_start,year_end,surv2) ~  + Year + DaysAssigned + Agency + CumulativeDays, 
+               data = dataset)
+
+#fit <- survfit(model, data = dataset)
+fit <- survfit(model, newdata = dummy)
+dim(fit)
+
+p <- ggsurvplot(fit, conf.int = TRUE, 
+                xlab="Total Years as IHC", 
+                ylab="Survival probability",
+                ggtheme = theme_survminer(base_size = 10),
+                palette = viridis(4),
+                color = 'strata',
+                #legend.title="Competing Wage Difference \n(thousands USD)",
+                legend="bottom",
+                #legend="none",
+                #legend.labs = c("30","40","50","60","70","80","90","100","110","120","130","140","150"),
+                size=1.5,
+                data = dummy)
+
+
+
+p
+
+
+####
+####
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 fit <- survfit(Surv(year_start,year_end,surv2)
                ~ CompetingWageDifference, data = dataset)
@@ -139,6 +314,29 @@ p <- ggsurvplot(fit, conf.int = TRUE,
                 legend.labs = c("20","30","40","50","60","70","80","90","100","110"),
                 size=0.7)
 p
+
+fit <- survfit(Surv(year_start,year_end,surv2)
+               ~ dataset$days_assigned, data = dataset)
+
+p <- ggsurvplot(fit, conf.int = FALSE, 
+                xlab="Total Years as IHC", 
+                ylab="Survival probability",
+                ggtheme = theme_survminer(base_size = 10),
+                palette = viridis(13),
+                color = 'strata',
+                legend.title="Competing Wage Difference \n(thousands USD)",
+                legend="bottom",
+                #legend="none",
+                #legend.labs = c("30","40","50","60","70","80","90","100","110","120","130","140","150"),
+                size=0.7)
+p
+
+
+dataset$DaysAssigned_divide <- dataset$days_assigned/100
+
+fit <- survfit(Surv(year_start,year_end,surv2)
+               ~ dataset$DaysAssigned_divide, data = dataset)
+
 
 ##
 ###
@@ -466,7 +664,7 @@ ggforest(m5, data = dataset, main = "Hazard ratio",
 #!#!#!
 
 
-m10 <- coxph(Surv(year_start,year_end,surv2) ~ CompetingWageDifference + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+m10 <- coxph(Surv(year_start,year_end,surv2) ~ CompetingWage + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
 summary(m10)
 m10
 
@@ -483,7 +681,7 @@ p <- ggforest(m10, data = dataset, main = "Hazard Ratio Estimate",
               fontsize = 2.6,
               refLabel = "reference",
               noDigits = 2)
-
+p
 ggsave(plot = p, width = 80, height = 120, dpi = 300, filename = "C:\\Users\\magst\\Desktop\\IHCretention\\Figures\\IHCModelFigures\\CompetingWageDifferenceForestPlot2.jpg")
 dev.off()
 
@@ -492,6 +690,7 @@ cluster <- cluster(dataset$year)
 
 pred <- predict(m10, data = dataset, type = "survival")
 
+pred
 
 
 plot(pred$x)
@@ -709,6 +908,13 @@ df$term
 #library(viridis)
 #cbp1 <- viridis(10)
 cbp1 <- gray.colors(10, start = 0.3, end = 0.9, gamma = 2.2, alpha = NULL, rev = FALSE)
+
+model1 <- tidy(model)
+model1$HazardRatio <- exp(model1$estimate)
+model1$Equation <- "~ Wage+AverageDaysAssigned+Year"
+cbp1 <- gray.colors(10, start = 0.3, end = 0.9, gamma = 2.2, alpha = NULL, rev = FALSE)
+
+df <- model1
 ggforestplot::forestplot(
   df = df,
   name = term,
