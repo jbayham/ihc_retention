@@ -6,18 +6,42 @@
 
 library(survival)
 library(survminer)
-
 library(ggforestplot)
 library(ggsurvfit)
 library(viridis)
 
+
 dataset <- readRDS("./analysis/inputs/dataPRD_dataforModeling.rds")
 
-# Round Deflated Competing Wage
-dataset$DeflatedCompetingWage <- as.numeric(as.character(dataset$DeflatedCompetingWage))
-dataset$DeflatedCompetingWage <- plyr::round_any(dataset$DeflatedCompetingWage, 10000, f = ceiling)
-dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)
 
+#1_24_2023 w/ Erin
+#dataset <- dataset[dataset$state_name!="California",]#as.numeric(dataset$DeflatedCompetingWage)<47900
+#hist(dftenure$DeflatedCompetingWage2, breaks=100)
+#hist(dftenure$DeflatedWage2, breaks=50)
+#hgA <- hist(dftenure$DeflatedCompetingWage2, breaks = 100, plot = FALSE) # Save first histogram data
+#hgB <- hist(dftenure$DeflatedWage2, breaks = 50, plot = FALSE) # Save 2nd histogram data
+#plot(hgA, col = alpha("lightblue",0.4)) # Plot 1st histogram using a transparent color
+#plot(hgB, col = alpha("red",0.5), add = TRUE) # Add 2nd histogram using different color
+#plot(dftenure$DeflatedCompetingWage2, dftenure$DeflatedWage2, xlim = c(40000,105000),ylim = c(40000,105000),
+#     ylab="Own Wage", xlab="Competing Wage")
+#table(dftenure$surv2)
+# test from 1/24/2023
+#dataset$nonassignment <- dataset$paid_base_only+dataset$paid_base_plus_ot
+#dataset$nonassignment <- as.numeric(dataset$nonassignment)
+#dataset$comwagespat <- dataset$real_competing_wage/(1+dataset$loco_adj_y)
+#dataset$comwagespat <- plyr::round_any(dataset$comwagespat, 10000, f = ceiling)
+##dataset$comwagespat <- as.factor(dataset$comwagespat)
+#dataset$comwagespat90 <- ifelse(dataset$comwagespat>=80000, 80000,dataset$comwagespat)
+#dataset$comwagespat90 <- as.factor(dataset$comwagespat90)
+
+#dataset$LocoRound <- plyr::round_any(dataset$loco_adj_y, 0.03, f = ceiling)
+#dataset$LocoRound <- as.factor(dataset$LocoRound)
+#dataset$state_name <- as.factor(dataset$state_name)
+
+#dataset$real_competing_wage_nonround <- dataset$real_competing_wage-dataset$real_wage
+#dataset2 <- dataset[dataset$state_name!='California',]
+#dataset3 <- dataset[dataset$first_year!='2008',]
+### End Erin
 
 #### covariate explination ####
 #
@@ -39,7 +63,9 @@ dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)
 # dataset$surv = final exit is an event (individuals can only have one event)
 #
 # dataset$surv2 = each year skipped is also an event (individuals can have multiple events)
+# library(dplyr)
 
+# Figure 2: Estimated Kaplan-Meier curve for IHCs 2008-2019
 # Kaplan-Meier non-parametric #####
 survfit2(Surv(year_start,year_end,surv2) ~ 1, data = dataset) |>
 ggsurvfit(size = 1) +
@@ -70,12 +96,181 @@ labs(
 ###
 #####
 # 
+# Deflated Competing Wage
+dataset$DeflatedCompetingWage2 <- as.numeric(as.character(dataset$DeflatedCompetingWage))
+dataset$DeflatedWage2 <- as.numeric(as.character(dataset$DeflatedWage))
+dataset$DeflatedWageDifferece2 <- dataset$DeflatedCompetingWage2 - dataset$DeflatedWage2
+# Round deflated competing wage
+dataset$DeflatedCompetingWageRound <- plyr::round_any(dataset$DeflatedCompetingWage2, 10000, f = floor)
+dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)#Round
+dataset$DeflatedCompetingWageRound <- factor(dataset$DeflatedCompetingWageRound)
+dataset$DeflatedWageDifferece2 <- dataset$DeflatedCompetingWage2 - dataset$DeflatedWage2
+
 ####
 ###
 ##
-#
+#, seq(0,1,by=0.1)
+#dataset <- dataset[as.numeric(as.character(dataset$DeflatedCompetingWage))<48900 & as.numeric(as.character(dataset$DeflatedCompetingWage))>46600,]#as.numeric(dataset$DeflatedCompetingWage)<47900
+#dataset1 <- dataset[as.numeric(as.character(dataset$surv2))>0,]#as.numeric(dataset$DeflatedCompetingWage)<47900
+
+# Quantcut wages and differences
+library(gtools)
+dataset$DeflatedCompetingWageQ <- quantcut(dataset$DeflatedCompetingWage2, q=10)
+dataset$DeflatedWageQ <- quantcut(dataset$DeflatedWage2, q=10)
+dataset$DeflatedWageDiffereceQ <- quantcut(dataset$DeflatedWageDifferece2, q=10)
+dataset$days_assignedQ <- quantcut(dataset$days_assigned, q=10)
+dataset$cumusum_daQ <- quantcut(dataset$cumusum_da, q=10)
+
+# same as above
+#dataset$DeflatedCompetingWageQ <- quantcut(dataset$DeflatedCompetingWage2, seq(0,1,by=0.1))
+#dataset$DeflatedWageQ <- quantcut(dataset$DeflatedWage2, seq(0,1,by=0.1))
+#dataset$DeflatedWageDiffereceQ <- quantcut(dataset$DeflatedWageDifferece2, seq(0,1,by=0.1))
+#dataset$days_assignedQ <- quantcut(dataset$days_assigned, seq(0,1,by=0.1))
+#dataset$cumusum_daQ <- quantcut(dataset$cumusum_da, seq(0,1,by=0.1))
+
+#hist(dataset2$DeflatedCompetingWage2, breaks=100)
+#plot(dataset2$DeflatedCompetingWage2, dataset2$year)
+
+
+model1 <- coxph(Surv(year_start,year_end,surv) ~ DeflatedCompetingWageQ + days_assignedQ + cumusum_daQ+ Year + Agency + GACC, 
+                data = dataset)#, cluster=dataset$crew_name) 
+
+model2 <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedWageDiffereceQ + days_assignedQ + cumusum_daQ+ Year + Agency + GACC, 
+                data = dataset)#, cluster=dataset$crew_name)
+
+model3 <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedWageDiffereceQ + cumusum_daQ+ Year + Agency + GACC, 
+                data = dataset)#, cluster=dataset$crew_name)
+
+model4 <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedWageDiffereceQ + days_assignedQ + cumusum_daQ + Year + crew_name + Agency + GACC, 
+                data = dataset)#, cluster=dataset$crew_name)
+
+
+summary(model1)
+p <- ggforest(model1, main = "Hazard Ratio Estimate", data = dataset,
+              #cpositions = c(0.05, 0.22, 0.4),
+              fontsize = 0.6,
+              refLabel = "reference",
+              noDigits = 1,
+              cpositions = c(0.02, 0.18, 0.4))
+p
+
+
+
+
+
+
+#FIG KM Curve - Shifted in progress
+dummy <- expand.grid(DeflatedCompetingWage=c(40000,100000), Year=c(2014), DaysAssigned=100, Agency="USFS", CumulativeDays=c(500))
+dummy <- data.frame(dummy)
+dummy$DeflatedCompetingWage <- as.factor(dummy$DeflatedCompetingWage)
+dummy$Year <- as.factor(dummy$Year)
+dummy$DaysAssigned <- as.factor(dummy$DaysAssigned)
+dummy$CumulativeDays <- as.factor(dummy$CumulativeDays)
+#dataset$DeflatedCompetingWage <- as.numeric(as.character(dataset$DeflatedCompetingWage))
+#dataset$DeflatedCompetingWage <- plyr::round_any(dataset$DeflatedCompetingWage, 10000, f = ceiling)
+#dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)
+
+model <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWage + Year + DaysAssigned + Agency + CumulativeDays, 
+               data = dataset)
+
+fit <- survfit(model, data = dataset)
+fitdummy <- survfit(model, newdata = dummy)
+
+#p <- ggsurvplot(fit, conf.int = TRUE, 
+#                xlab="Total Years as IHC", 
+#                ylab="Survival probability",
+#                ggtheme = theme_survminer(base_size = 10),
+#                palette = viridis(3),
+#                color = 'strata',
+#                #legend.title="Competing Wage \n(thousands USD)",
+#                legend="bottom",
+#                #legend="none",
+#                #legend.labs = c("30","40","50","60","70","80","90","100","110","120","130","140","150"),
+#                size=1.5,
+#                data = dataset)
+#p
+
+q <- ggsurvplot(fitdummy, 
+                xlim = c(0,11), 
+                break.x.by = 1,
+                conf.int = TRUE, 
+                xlab="Total Years as IHC", 
+                ylab="Survival probability",
+                ggtheme = theme_survminer(base_size = 10),
+                palette = viridis(2),
+                color = 'strata',
+                legend.title="Competing Wage \n(thousands USD)",
+                legend="bottom",
+                #legend="none",
+                #legend.labs = c("50","100"),
+                size=1.5,
+                data = dummy)
+
+q
+
+
+
+
+
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+# Below is old code that I can't seem to part ways with 
+################################################################################
+################################################################################
+################################################################################
+
+library(tidyverse)
+library(broom)
+
+model1 <- tidy(model1)
+df <- model1
+
+ggforestplot::forestplot(
+  df = df,
+  name = term,
+  estimate = HazardRatio,
+  se = std.error,
+  colour = Equation,
+  fontsize = 10.6,
+  #pvalue = TRUE,
+  xlab = "Hazard Ratio (95% CI)",
+  xlim = c(-.5,3)
+  #cex  = 2,
+  #pallette = cbp1
+  #psignif = 0.2
+  #zero = 9,
+  #logodds = TRUE,
+  #lines = list( # as many parameters as CI
+  #  gpar(lwd = 10), gpar(lwd = 5),
+  #  gpar(), gpar(),
+  #  gpar(lwd = 200), gpar(lwd = 1)
+)+ geom_vline(xintercept = 1)+ geom_vline(xintercept = 3)+
+  guides(colour = guide_legend(override.aes = list(size=5)))+ 
+  geom_vline(xintercept = 2)+  scale_colour_manual(values=cbp1)+
+  theme(legend.position = 'right', legend.direction = "vertical")
+
+
+
+
 # Hazard ratio plots #####
-model <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWage + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+#model <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWage + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+#model <- coxph(Surv(year_start,year_end,surv2) ~nonassignment+ comwagespat90 + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+model <- coxph(Surv(year_start,year_end,surv2) ~ nonassignment+ DeflatedCompetingWageRound + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+model <- coxph(Surv(year_start,year_end,surv2) ~ nonassignment +comwagespat90+ Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+model <- coxph(Surv(year_start,year_end,surv2) ~ state_name +comwagespat90+ Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+model <- coxph(Surv(year_start,year_end,surv2) ~ LocoRound+ Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+model <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWageDifference+ Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
+model <- coxph(Surv(year_start,year_end,surv2) ~ GACC+real_competing_wage+days_assigned+ Year+Agency+cumusum_da, data = dataset)#, cluster=dataset$crew_name)
+model <- coxph(Surv(year_start,year_end,surv2) ~ factor(dataset$res_id)+ GACC+real_competing_wage+days_assigned+cumusum_da+ Year+Agency, data = dataset)#, cluster=dataset$crew_name)
+
+
+summary(model)
 #model2 <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWageDifference + Year+DaysAssigned+Agency+CumulativeDays, data = dataset)#, cluster=dataset$crew_name)
 
 summary(model)
