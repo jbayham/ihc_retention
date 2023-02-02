@@ -9,11 +9,94 @@ library(survminer)
 library(ggforestplot)
 library(ggsurvfit)
 library(viridis)
+library(modelsummary)
+library(gtools)
+
+source("functions/helper_functions.R") #This loads a helper function for the package used to generate tables below.
 
 
 dataset <- readRDS("./analysis/inputs/dataPRD_dataforModeling.rds")
 
+reg_dat <- dataset %>%
+  select(res_id,crew_name,state_name,fips,year_start,year_end,surv,surv2,
+         real_wage,real_competing_wage,days_assigned,cumusum_da,year,agency,GACC) %>%
+  mutate(fips=str_pad(fips,5,"left","0"),
+         wage_diff=real_wage-real_competing_wage,  #Compute difference between own and competing wage
+         across(contains("wage"),~./1000),
+         across(c(agency,GACC,crew_name),factor),
+         agency=relevel(agency,ref="USFS"),
+         GACC=relevel(GACC,ref = "CA-OSCC"),
+         wage_diff_scaled = scale(wage_diff)) %>%
+  filter(abs(wage_diff_scaled)<3) #Remove obs >3 sd from mean
 
+
+
+########################
+#Estimating the models with levels
+
+rows <- tibble::tribble(~term, ~Bivariate, ~Multivariate,
+                        'Empty row', '-', '-',
+                        'Another empty row', '?', '?')
+
+rows <- tibble::tribble(~term, ~M1, ~M2, ~M3,
+                        'Fixed Effects', '', '', '',
+                        'Agency', 'x', 'x', 'x',
+                        'GACC', 'x', 'x', 'x',
+                        'Crew', '', '', 'x',)
+
+attr(rows, 'position') <- c(21:24)
+
+
+model1 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
+                data = reg_dat,cluster=crew_name) 
+
+model2 <- coxph(Surv(year_start,year_end,surv2) ~ wage_diff + days_assigned + cumusum_da + year + agency + GACC, 
+                data = reg_dat, cluster=crew_name)
+
+model3 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC + crew_name, 
+                data = reg_dat, cluster=crew_name)
+
+# model4 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + cumusum_da + year + agency + GACC, 
+#                 data = reg_dat, cluster=crew_name)
+# 
+# model5 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da+ year + agency + GACC + crew_name, 
+#                 data = reg_dat, cluster=crew_name)
+
+
+model_list <- list(`1`=model1,`2`=model2,`3`=model3)
+
+modelsummary(model_list,
+             #coef_omit = "crew_name|GACC|year|agency",
+             coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (days)",
+                          "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
+                          "year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
+             stars = T,
+             title = "Cox PH regression results \\label{tab:main_results}",
+             statistic = "robust.se",
+             gof_omit = "AIC|RMSE",
+             add_rows = rows,
+             notes = 'Standard errors are clustered at the IH Crew level to account for correlation between crew members.',
+             output = "analysis/outputs/main_result_tab.tex")
+
+
+##############
+#with binned coeficients
+
+reg_dat_binned <- reg_dat %>%
+  mutate(across(contains("wage"),~quantcut(.,q=10)))
+
+
+model1 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
+                data = reg_dat_binned, cluster=crew_name) 
+
+model2 <- coxph(Surv(year_start,year_end,surv2) ~ wage_diff + days_assigned + cumusum_da + year + agency + GACC, 
+                data = reg_dat_binned, cluster=crew_name)
+
+
+summary(model1)
+summary(model2)
+
+hb_occ_top5 <- read_csv("build/cache/hb_occ_top5.csv")
 #1_24_2023 w/ Erin
 #dataset <- dataset[dataset$state_name!="California",]#as.numeric(dataset$DeflatedCompetingWage)<47900
 #hist(dftenure$DeflatedCompetingWage2, breaks=100)
@@ -106,6 +189,11 @@ dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)#Round
 dataset$DeflatedCompetingWageRound <- factor(dataset$DeflatedCompetingWageRound)
 dataset$DeflatedWageDifferece2 <- dataset$DeflatedCompetingWage2 - dataset$DeflatedWage2
 
+#Rewriting with dplyr
+dataset_check <- dataset %>%
+  mutate(DeflatedCompetingWageRound=cut_width(as.numeric(as.character(DeflatedCompetingWage)),10000))
+
+
 ####
 ###
 ##
@@ -114,7 +202,6 @@ dataset$DeflatedWageDifferece2 <- dataset$DeflatedCompetingWage2 - dataset$Defla
 #dataset1 <- dataset[as.numeric(as.character(dataset$surv2))>0,]#as.numeric(dataset$DeflatedCompetingWage)<47900
 
 # Quantcut wages and differences
-library(gtools)
 dataset$DeflatedCompetingWageQ <- quantcut(dataset$DeflatedCompetingWage2, q=10)
 dataset$DeflatedWageQ <- quantcut(dataset$DeflatedWage2, q=10)
 dataset$DeflatedWageDiffereceQ <- quantcut(dataset$DeflatedWageDifferece2, q=10)
@@ -143,6 +230,11 @@ model3 <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedWageDiffereceQ + cumus
 
 model4 <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedWageDiffereceQ + days_assignedQ + cumusum_daQ + Year + crew_name + Agency + GACC, 
                 data = dataset)#, cluster=dataset$crew_name)
+
+model_list <- list(M1=model1,M2=model2,M3=model3,M4=model4)
+
+modelsummary(model_list,coef_omit = "crew_name")
+
 
 
 summary(model1)

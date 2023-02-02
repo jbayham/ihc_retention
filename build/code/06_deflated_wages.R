@@ -17,7 +17,7 @@ avg_cpi <- apply.yearly(CPIAUCSL, mean) %>% #calculate annual average
 
 #Joining the deflator and applying it to the wage variables
 deflated_prd <- dataPRD3 %>%
-  inner_join(select(avg_cpi,-cpi),by="year") %>%. 
+  inner_join(select(avg_cpi,-cpi),by="year") %>% 
   mutate(real_wage=SeniorFFxLoc/adj,
          real_competing_wage=med_wage/adj)
   
