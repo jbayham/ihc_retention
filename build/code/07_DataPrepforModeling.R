@@ -43,7 +43,7 @@ dataset$AverageDaysAssigned <- dataset$cumusum_da/dataset$cumusum_year
 dataset$AverageDaysAssignedROUND <- plyr::round_any(dataset$AverageDaysAssigned, 10, f = ceiling)
 dataset <- dataset[dataset$AverageDaysAssigned<159,]
 dataset$AverageDaysAssignedROUND <- base::factor(dataset$AverageDaysAssignedROUND)
-dataset$days_assigned <- plyr::round_any(dataset$days_assigned, 10, f = ceiling)
+dataset$days_assigned_ROUND <- plyr::round_any(dataset$days_assigned, 10, f = ceiling)
 dataset <- dataset[dataset$days_assigned<160,]
 
 dataset$med_wageCOPY <- dataset$med_wage
@@ -112,11 +112,22 @@ dataset$CompetingWage <- plyr::round_any(dataset$med_wageCOPY, 10000, f = ceilin
 
 dataset$CompetingWage <- as.factor(dataset$CompetingWage)
 
+# 1_31_2023
+# Round Deflated Competing Wage
+#dataset$DeflatedCompetingWage2 <- as.numeric(as.character(dataset$DeflatedCompetingWage))
+#dataset$DeflatedWage2 <- as.numeric(as.character(dataset$DeflatedWage))
+#dataset$DeflatedWageDifferece2 <- dataset$DeflatedCompetingWage2 - dataset$DeflatedWage2
+
+#dataset$DeflatedCompetingWageRound <- plyr::round_any(dataset$DeflatedCompetingWage2, 10000, f = ceiling)
+#dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWageRound)
+#dataset$DeflatedCompetingWageRound <- factor(dataset$DeflatedCompetingWageRound)
+#dataset$DeflatedWageDifferece2 <- dataset$DeflatedCompetingWage2 - dataset$DeflatedWage2
+
 #dataset$Wage <- plyr::round_any(dataset$senior_f_fx_loc_copy, 5000, f = ceiling) 
 #dataset$Wage <- as.factor(dataset$Wage)
 #table(dataset$GACC)
 #table(dataset$Agency)
-
+#
 
 
 saveRDS(dataset, file = "analysis/inputs/dataPRD_dataforModeling.rds")

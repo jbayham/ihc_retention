@@ -145,7 +145,9 @@ model4 <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedWageDiffereceQ + days_
                 data = dataset)#, cluster=dataset$crew_name)
 
 
+
 summary(model1)
+
 p <- ggforest(model1, main = "Hazard Ratio Estimate", data = dataset,
               #cpositions = c(0.05, 0.22, 0.4),
               fontsize = 0.6,

@@ -1,27 +1,29 @@
 
+library(readxl)
 
-
-#################
+#################"C:\Users\magst\Desktop\git\ihc_retention\build\inputs\inputs\bls"
 #read data by year
-flist <- dir("build/inputs/bls/",pattern = ".xlsx")
+#flist <- dir(".build/inputs/bls/",pattern = ".xlsx")
+flist <- dir("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\inputs\\bls\\",pattern = ".xlsx")
+
 oe_dat <- vector("list",length(flist))
 
 #Reading in large xlsx files.  There was a structural change in 2017 (i=6) so the read command changed to ensure correct datatype in read.
 for(i in c(1:5)){ 
     #read data
-  oe_dat[[i]] <- read_excel(str_c("build/inputs/bls/",flist[i]),sheet = 1,
-                            col_types = c(rep("text",9),rep("numeric",20)))
+  oe_dat[[i]] <- read_excel(str_c("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\inputs\\bls\\",flist[i]),sheet = 1,
+                            col_types = c(rep("text",9),rep("numeric",20)))#"build/inputs/bls/"
     
 }
 
 for(i in c(6:8)){
   #read data
-  oe_dat[[i]] <- read_excel(str_c("build/inputs/bls/",flist[i]),sheet = 1,
-                            col_types = c(rep("text",10),rep("numeric",20)))
+  oe_dat[[i]] <- read_excel(str_c("C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\inputs\\bls\\",flist[i]),sheet = 1,
+                            col_types = c(rep("text",10),rep("numeric",20)))#"build/inputs/bls/"
   
 }
 
-var_select <- c("area","area_title","area_type","naics","naics_title","own_code","occ_code","occ_title","tot_emp")
+excevar_select <- c("area","area_title","area_type","naics","naics_title","own_code","occ_code","occ_title","tot_emp")
 
 #add year and subset fields
 merge_dat <- map2_dfr(oe_dat,flist,function(df,y){

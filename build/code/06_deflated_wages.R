@@ -3,12 +3,15 @@
 # (6) To compute income bin for each year ######################################
 ################################################################################
 ################################################################################
-#library(cartography)
+library(cartography)
 
-dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSURV.rds")
+#dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSURV.rds")
+dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSalary.rds")
 
 #Using package quantmod to pull the CPI series from FRED (St Louis Fed database)
 getSymbols("CPIAUCSL", src='FRED') #Note this creates an object called CPIAUSL
+
+
 avg_cpi <- apply.yearly(CPIAUCSL, mean) %>% #calculate annual average
   as_tibble(rownames = "measure_date") %>%  #coerce to dataframe with rownames as a field
   mutate(year=year(as_date(measure_date))) %>%  #Extract year from date
@@ -17,7 +20,7 @@ avg_cpi <- apply.yearly(CPIAUCSL, mean) %>% #calculate annual average
 
 #Joining the deflator and applying it to the wage variables
 deflated_prd <- dataPRD3 %>%
-  inner_join(select(avg_cpi,-cpi),by="year") %>%. 
+  inner_join(select(avg_cpi,-cpi),by="year") %>% 
   mutate(real_wage=SeniorFFxLoc/adj,
          real_competing_wage=med_wage/adj)
   
@@ -34,7 +37,7 @@ deflated_prd <- dataPRD3 %>%
 
 
 #Cache dataset
-write_csv(deflated_prd, file = "build/cache/prd_deflated_wages.csv")
+write.csv(deflated_prd, file = "build/cache/prd_deflated_wages.csv")
 
 ################################################################################
 ################################################################################

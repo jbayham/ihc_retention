@@ -7,7 +7,6 @@
 
 # Filepath to personnel retention data (only interested in IHC for this project)
 filepathPRD <- "./build/inputs/Personnel Retentaion data 2008 to 2019 IHCs only.csv"
-#filepathPRD <- "C:\\Users\\magst\\Desktop\\git\\ihc_retention\\build\\inputs\\Personnel Retentaion data 2008 to 2019 IHCs only.csv"
 # read and filter personal retention data
 # select only "IHC" and res and crew ideas greater than 0
 # select IHC where days assigned >28
