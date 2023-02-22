@@ -23,9 +23,10 @@ reg_dat <- dataset %>%
   mutate(fips=str_pad(fips,5,"left","0"),
          wage_diff=real_wage-real_competing_wage,  #Compute difference between own and competing wage
          across(contains("wage"),~./1000),
-         across(c(agency,GACC,crew_name),factor),
+         across(c(agency,GACC,crew_name,year),factor),
          agency=relevel(agency,ref="USFS"),
          GACC=relevel(GACC,ref = "CA-OSCC"),
+         year=relevel(year,ref = "2015"),
          wage_diff_scaled = scale(wage_diff)) %>%
   filter(abs(wage_diff_scaled)<3) #Remove obs >3 sd from mean
 
@@ -33,10 +34,6 @@ reg_dat <- dataset %>%
 
 ########################
 #Estimating the models with levels
-
-rows <- tibble::tribble(~term, ~Bivariate, ~Multivariate,
-                        'Empty row', '-', '-',
-                        'Another empty row', '?', '?')
 
 rows <- tibble::tribble(~term, ~M1, ~M2, ~M3,
                         'Fixed Effects', '', '', '',
@@ -48,19 +45,13 @@ attr(rows, 'position') <- c(21:24)
 
 
 model1 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
-                data = reg_dat,cluster=crew_name) 
+                data = reg_dat,cluster=crew_name,id=res_id) 
 
 model2 <- coxph(Surv(year_start,year_end,surv2) ~ wage_diff + days_assigned + cumusum_da + year + agency + GACC, 
                 data = reg_dat, cluster=crew_name)
 
 model3 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC + crew_name, 
                 data = reg_dat, cluster=crew_name)
-
-# model4 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + cumusum_da + year + agency + GACC, 
-#                 data = reg_dat, cluster=crew_name)
-# 
-# model5 <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da+ year + agency + GACC + crew_name, 
-#                 data = reg_dat, cluster=crew_name)
 
 
 model_list <- list(`1`=model1,`2`=model2,`3`=model3)
@@ -69,8 +60,9 @@ modelsummary(model_list,
              #coef_omit = "crew_name|GACC|year|agency",
              coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (days)",
                           "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
-                          "year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
+                          "year2012"="Year 2012","year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
              stars = T,
+             exponentiate = F,
              title = "Cox PH regression results \\label{tab:main_results}",
              statistic = "robust.se",
              gof_omit = "AIC|RMSE",
@@ -78,6 +70,82 @@ modelsummary(model_list,
              notes = 'Standard errors are clustered at the IH Crew level to account for correlation between crew members.',
              output = "analysis/outputs/main_result_tab.tex")
 
+modelsummary(model_list,
+             #coef_omit = "crew_name|GACC|year|agency",
+             coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (days)",
+                          "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
+                          "year2012"="Year 2012","year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
+             stars = T,
+             exponentiate = F,
+             title = "Cox PH regression results \\label{tab:main_results}",
+             statistic = "[{conf.low}, {conf.high}]",
+             gof_omit = "AIC|RMSE",
+             add_rows = rows,
+             notes = 'Standard errors are clustered at the IH Crew level to account for correlation between crew members.')#,
+#             output = "analysis/outputs/main_result_tab_ci.tex")
+
+
+
+#Setting new data
+new_dat <- as_tibble(model.matrix(model1)) %>%
+  dplyr::summarize(across(1:3,median)) %>%
+  add_column(year=2015,agency="USFS",GACC="CA-OSCC") %>%
+  mutate(across(c(year,agency,GACC),factor))
+
+
+library(coxed)
+md1 <- coxed(model1,newdata = new_dat, method="npsf",id="res_id")
+da_med <- summary(md1, stat="median")
+
+new_dat_da <- new_dat %>%
+  mutate(days_assigned=quantile(as.data.frame(model.matrix(model1))$days_assigned,prob=.9)) #setting to the 90th percentile
+md1_da <- coxed(model1, newdata = new_dat_da, method="npsf",id="res_id")
+da_90 <- summary(md1_da, stat="median")
+
+da_pc <- (da_90-da_med)/da_med
+da_med; da_90; da_pc
+
+
+#####################################
+
+model1$linear.predictors
+predict(model1,type = "expected")
+
+#FIG KM Curve - Shifted in progress
+dummy <- expand.grid(DeflatedCompetingWage=c(40000,100000), Year=c(2014), DaysAssigned=100, Agency="USFS", CumulativeDays=c(500))
+dummy <- data.frame(dummy)
+dummy$DeflatedCompetingWage <- as.factor(dummy$DeflatedCompetingWage)
+dummy$Year <- as.factor(dummy$Year)
+dummy$DaysAssigned <- as.factor(dummy$DaysAssigned)
+dummy$CumulativeDays <- as.factor(dummy$CumulativeDays)
+#dataset$DeflatedCompetingWage <- as.numeric(as.character(dataset$DeflatedCompetingWage))
+#dataset$DeflatedCompetingWage <- plyr::round_any(dataset$DeflatedCompetingWage, 10000, f = ceiling)
+#dataset$DeflatedCompetingWage <- as.factor(dataset$DeflatedCompetingWage)
+
+model <- coxph(Surv(year_start,year_end,surv2) ~ DeflatedCompetingWage + Year + DaysAssigned + Agency + CumulativeDays, 
+               data = dataset)
+
+fit <- survfit(model, data = dataset)
+fitdummy <- survfit(model, newdata = dummy)
+
+
+q <- ggsurvplot(fitdummy, 
+                xlim = c(0,11), 
+                break.x.by = 1,
+                conf.int = TRUE, 
+                xlab="Total Years as IHC", 
+                ylab="Survival probability",
+                ggtheme = theme_survminer(base_size = 10),
+                palette = viridis(2),
+                color = 'strata',
+                legend.title="Competing Wage \n(thousands USD)",
+                legend="bottom",
+                #legend="none",
+                #legend.labs = c("50","100"),
+                size=1.5,
+                data = dummy)
+
+q
 
 ##############
 #with binned coeficients
