@@ -22,6 +22,7 @@ reg_dat <- dataset %>%
          real_wage,real_competing_wage,days_assigned,cumusum_da,year,agency,GACC) %>%
   mutate(fips=str_pad(fips,5,"left","0"),
          wage_diff=real_wage-real_competing_wage,  #Compute difference between own and competing wage
+         cumusum_da=cumusum_da/100,
          across(contains("wage"),~./1000),
          across(c(agency,GACC,crew_name,year),factor),
          agency=relevel(agency,ref="USFS"),
@@ -58,7 +59,7 @@ model_list <- list(`1`=model1,`2`=model2,`3`=model3)
 
 modelsummary(model_list,
              #coef_omit = "crew_name|GACC|year|agency",
-             coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (days)",
+             coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (100 days)",
                           "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
                           "year2012"="Year 2012","year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
              stars = T,
@@ -84,7 +85,18 @@ modelsummary(model_list,
              notes = 'Standard errors are clustered at the IH Crew level to account for correlation between crew members.')#,
 #             output = "analysis/outputs/main_result_tab_ci.tex")
 
-
+modelsummary(model_list,
+             #coef_omit = "crew_name|GACC|year|agency",
+             coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (days)",
+                          "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
+                          "year2012"="Year 2012","year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
+             stars = T,
+             exponentiate = T,
+             title = "Cox PH regression results \\label{tab:main_results}",
+             statistic = "[{conf.low}, {conf.high}]",
+             gof_omit = "AIC|RMSE",
+             add_rows = rows,
+             notes = 'Standard errors are clustered at the IH Crew level to account for correlation between crew members.')
 
 #Setting new data
 new_dat <- as_tibble(model.matrix(model1)) %>%
@@ -97,10 +109,20 @@ library(coxed)
 md1 <- coxed(model1,newdata = new_dat, method="npsf",id="res_id")
 da_med <- summary(md1, stat="median")
 
-new_dat_da <- new_dat %>%
+#Days assigned
+new_dat_90 <- new_dat %>%
   mutate(days_assigned=quantile(as.data.frame(model.matrix(model1))$days_assigned,prob=.9)) #setting to the 90th percentile
-md1_da <- coxed(model1, newdata = new_dat_da, method="npsf",id="res_id")
-da_90 <- summary(md1_da, stat="median")
+md1_90 <- coxed(model1, newdata = new_dat_90, method="npsf",id="res_id")
+da_90 <- summary(md1_90, stat="median")
+
+da_pc <- (da_90-da_med)/da_med
+da_med; da_90; da_pc
+
+#Cumulative workload
+new_dat_90 <- new_dat %>%
+  mutate(cumusum_da=quantile(as.data.frame(model.matrix(model1))$cumusum_da,prob=.9)) #setting to the 90th percentile
+md1_90 <- coxed(model1, newdata = new_dat_90, method="npsf",id="res_id")
+da_90 <- summary(md1_90, stat="median")
 
 da_pc <- (da_90-da_med)/da_med
 da_med; da_90; da_pc
