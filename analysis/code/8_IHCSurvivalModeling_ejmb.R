@@ -35,8 +35,52 @@ reg_dat <- dataset %>%
               mutate(crew_id = str_c("crew_",row_number())), 
             by = c("crew_name" = "crew_name"))
 
+################################################################
+# summary stats
+################################################################
 
+library(stargazer)
+dat_fewer = reg_dat %>% select(days_assigned, cumusum_da, real_competing_wage, real_wage, wage_diff, year,agency, GACC)
+stargazer(dat_fewer, type = "latex", 
+          covariate.labels = c("Days Assigned", "Cumulative Experience (100 days)", "Competing Wage ($1000)",
+                               "Max Crew Earning Potential ($1000)", "MCEP - Competing Wage ($1000)"),
+          summary.stat = c("min", "p25", "mean", "median", "p75", "max"))
 
+# data by year
+yr_dat = reg_dat %>% select(year) %>% group_by(year) %>% summarise(total_observations = n()) %>% arrange(year) %>%
+  left_join(reg_dat %>% filter(surv2 == 1) %>% select(year) %>% group_by(year) %>% summarise(number_leave_events = n()) %>% arrange(year),
+            by = c("year" = "year")) %>%
+  left_join(reg_dat %>% filter(surv2 == 0) %>% select(year) %>% group_by(year) %>% summarise(number_stay_events = n()) %>% arrange(year),
+            by = c("year" = "year")) %>%
+  left_join(reg_dat %>% select(days_assigned, year) %>% group_by(year) %>% summarise(med_days_assigned = median(days_assigned)),
+            by = c("year" = "year")) %>%
+  left_join(reg_dat %>% select(cumusum_da, year) %>% group_by(year) %>% summarise(med_cumusum_da = median(cumusum_da)),
+            by = c("year" = "year")) %>%
+  left_join(reg_dat %>% select(real_competing_wage, year) %>% group_by(year) %>% summarise(med_real_competing_wage = median(real_competing_wage)),
+            by = c("year" = "year")) %>%
+  left_join(reg_dat %>% select(real_wage, year) %>% group_by(year) %>% summarise(med_real_wage = median(real_wage)),
+            by = c("year" = "year")) %>%
+  left_join(reg_dat %>% distinct(year, crew_id) %>% select(year) %>% group_by(year) %>% summarise(number_crews_represented = n()),
+            by = c("year" = "year")) %>%
+  #remove_rownames() %>% column_to_rownames(var="year") %>%
+  pivot_longer(cols= -1) %>% pivot_wider(names_from = "year",values_from = "value") %>% rename("Statistic" = "name") %>%
+  mutate(Statistic = case_when(Statistic == "total_observations" ~ "Total Observations",
+                               Statistic == "number_crews_represented" ~ "Number Crews Represented",
+                               Statistic == "number_leave_events" ~ "Number Leave Events",
+                               Statistic == "number_stay_events" ~ "Number Stay Events",
+                               Statistic == "med_days_assigned" ~ "Median Days Assigned",
+                               Statistic == "med_cumusum_da" ~ "Median Cumulative Experience (100 days)",
+                               Statistic == "med_real_competing_wage" ~ "Median Competing Wage ($1000)",
+                               Statistic == "med_real_wage" ~ "Median MCEP ($1000)",
+                               TRUE ~ ""))
+
+library(xtable)
+xtable(yr_dat)
+
+# number individuals in data set
+length(unique(reg_dat$res_id))
+# number crews in data set
+length(unique(reg_dat$crew_id))
 ################################################################
 # Estimate baseline Kaplan-Meier curve
 ################################################################
@@ -85,6 +129,8 @@ km_baseline_model
 
 # look at percentages of specific years
 km_baseline_model$surv
+km_baseline_model$lower
+km_baseline_model$upper
 
 ################################################################
 #Estimating the Cox_Proportional Hazard models with levels
@@ -123,7 +169,7 @@ model_list <- list(`1`=model1,`2`=model2,`3`=model3)
 
 modelsummary(model_list,
              #coef_omit = "crew_name|GACC|year|agency",
-             coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (days)",
+             coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (100 days)",
                           "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
                           "year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
              stars = T,
