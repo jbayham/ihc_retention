@@ -17,13 +17,6 @@ dataPRD <- dataPRD[dataPRD$res_id > 0, ]
 dataPRD <- dataPRD[dataPRD$IHC_res_ID > 0, ]
 dataPRD <- dataPRD[dataPRD$days_assigned > 28, ]
 
-# remove fatalities 
-dataPRD <- dataPRD[dataPRD$res_id != 574054, ]
-dataPRD <- dataPRD[dataPRD$res_id != 451135, ]
-dataPRD <- dataPRD[dataPRD$res_id != 863525, ]
-dataPRD <- dataPRD[dataPRD$res_id != 354944, ]
-dataPRD <- dataPRD[dataPRD$res_id != 1721363, ]
-dataPRD <- dataPRD[dataPRD$res_id != 61950, ]
 
 # a column for first year and last year 
 # and total lifetime days assigned 
@@ -76,23 +69,38 @@ colnames(dataPRD)[8] <- "TOTALDAYS"
 colnames(dataPRD)[9] <- "TotalYEARS"
 colnames(dataPRD)[10] <- "AveDAYPerYEARS"
 
+# quick data check on the cohort we're looking at
+# how many people started in 2008 and were still there in 2012
+
+tmp = dataPRD %>% select(res_id, firstYear, lastYear) %>% group_by(res_id, firstYear, lastYear) %>% summarise(count = n()) %>% ungroup()
+length(tmp$res_id[tmp$firstYear == 2008 & tmp$lastYear>2011])
 
 # cumulative year (corrects for skip years)
 dataPRD$cumusumYEARMarker <-  1
 dataPRD <- dataPRD%>%dplyr::arrange(res_id,year)%>%dplyr::group_by(res_id)%>%dplyr::mutate(cumusumYEAR=cumsum(cumusumYEARMarker))
 dataPRD <- dataPRD%>%dplyr::arrange(res_id,year)%>%dplyr::group_by(res_id)%>%dplyr::mutate(cumusumDA=cumsum(days_assigned))
-#dataPRD <- dataPRD%>%dplyr::arrange(res_id,year)%>%dplyr::group_by(res_id)%>%dplyr::mutate(cumusumSFF=cumsum(SeniorFFxLoc))
-#dataPRD <- dataPRD%>%dplyr::arrange(res_id,year)%>%dplyr::group_by(res_id)%>%dplyr::mutate(cumusumTH=cumsum(total_hours))
+
 
 ### 9/20/2022 ###
 # final exit 
 dataPRD["surv"] <- ifelse(dataPRD$lastYear==dataPRD$year,"1","0")
 
-# 
+## 3/23/2023 - right censor fatalities instead of removing
+dataPRD$surv = case_when( (dataPRD$res_id == 574054 |
+                           dataPRD$res_id == 451135 |
+                           dataPRD$res_id == 863525 |
+                           dataPRD$res_id == 354944 |
+                           dataPRD$res_id == 1721363 |
+                           dataPRD$res_id == 61950) & 
+                            dataPRD$surv == "1" ~ "0",
+                          TRUE ~ dataPRD$surv)
+
+
 dataPRD <- dataPRD %>%
   group_by(res_id) %>%
   arrange(year, .by_group = TRUE) %>%
-  mutate(yearminusyear = lead(year,k=1, default = first(year)) - year)
+  mutate(yearminusyear = lead(year,k=1, default = first(year)) - year,
+         yearminusyear_lag = lead(year,k=1, default = first(year)) - year)
 
 dataPRD$residDIFF <- ave(dataPRD$res_id, FUN = function(x) c(diff(x),0))
 
@@ -100,15 +108,43 @@ dataPRD$skipyear <- ifelse(dataPRD$yearminusyear>1 & dataPRD$residDIFF==0,1,0)
 
 dataPRD$skipyear <- as.numeric(dataPRD$skipyear)
 
+dataPRD$skipyear_lag = dplyr::lag(dataPRD$skipyear)
+
 dataPRD$surv <- as.numeric(dataPRD$surv)
 
 dataPRD$surv2 <- dataPRD$skipyear+dataPRD$surv
 
-### end 9/20/2022 ###
+## Need to update start year and end year for reentry.
+# There are two possible ways to treat reenter.
+# First, reset their "clock" so that a re-entry is associated with t0=0 (i.e., change first year to year of reentry).
+# Second, have them reenter in the cohort of people who have the same years of experience as they do.
+
+#Shayne's original year_start and year_end
+dataPRD = dataPRD %>% mutate(year_end = (year-firstYear)+1,
+       year_start = (year-firstYear)) %>%
+  # for those who reentered, set t0 to cohort with same years of experience
+  mutate(year_start_reentry_older_cohort = cumusumYEAR - 1,
+         year_end_reentry_older_cohort = cumusumYEAR) %>%
+  # for those who reentered, to restart their clock, set their first_year_reentry_clock equal to the year of reentry
+  # first year needs to be set to reentry year for all years after each skip
+  mutate(first_year_reentry_clock = case_when(skipyear_lag == 1 ~ year, 
+                                              firstYear == year ~ firstYear,
+                                              TRUE ~ NA_integer_)) %>%
+  arrange(res_id, year) %>%
+  fill(first_year_reentry_clock) %>% # fills down by default
+  mutate(year_start_reentry_clock = year - first_year_reentry_clock,
+         year_end_reentry_clock = year - first_year_reentry_clock + 1)
+
+#double check that reentry calculations went correctly
+#tmp = dataPRD %>%
+#  select(res_id, year,skipyear_lag, firstYear, first_year_reentry_clock,
+#         year_start_reentry_clock,year_end_reentry_clock,
+#         year_start_reentry_older_cohort,year_end_reentry_older_cohort)
+
 
 
 # clean global environments
-remove <- c("maxyear","minyear","TOTALDAYS","TOTALYEARS","AveDAYPerYEARS")
+remove <- c("maxyear","minyear","TOTALDAYS","TOTALYEARS","AveDAYPerYEARS", "tmp")
 rm(list = remove)
 
 saveRDS(dataPRD, file = "build/cache/PRD_IHC.rds")

@@ -16,6 +16,8 @@ conflict_prefer("filter", "dplyr")
 conflict_prefer("select", "dplyr")
 conflict_prefer("between", "dplyr")
 conflict_prefer("first", "dplyr")
+conflict_prefer("summarize", "dplyr")
+conflict_prefer("scale", "base")
 
 #########################
 #Loading project helper functions (all scripts within folder)

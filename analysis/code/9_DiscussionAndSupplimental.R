@@ -14,7 +14,9 @@ dataset <- readRDS("./analysis/inputs/dataPRD_dataforModeling.rds")
 
 reg_dat <- dataset %>%
   select(res_id,crew_name,state_name,fips,year_start,year_end,surv,surv2,
-         real_wage,real_competing_wage,days_assigned,cumusum_da,year,agency,GACC, first_year) %>%
+         real_wage,real_competing_wage,days_assigned,cumusum_da,year,agency,GACC, first_year,
+         year_start_reentry_older_cohort, year_end_reentry_older_cohort,
+         year_start_reentry_clock, year_end_reentry_clock) %>%
   mutate(fips=str_pad(fips,5,"left","0"),
          wage_diff=real_wage-real_competing_wage,  #Compute difference between own and competing wage
          cumusum_da=cumusum_da/100,
@@ -24,10 +26,16 @@ reg_dat <- dataset %>%
          GACC=relevel(GACC,ref = "CA-OSCC"),
          wage_diff_scaled = scale(wage_diff)) %>%
   filter(abs(wage_diff_scaled)<3) %>% #Remove obs >3 sd from mean 
+  #filter(cumusum_da<10) %>% # remove cumusum days of >=1000 - taken out March 23, 2023
   # for crew name model, need a crew id that is completely de-identified
   left_join(tibble(crew_name = unique(dataset$crew_name)) %>%
               mutate(crew_id = str_c("crew_",row_number())), 
-            by = c("crew_name" = "crew_name")) %>% 
+            by = c("crew_name" = "crew_name")) %>%
+  mutate(year = relevel(year, ref="2015")) %>%
+  select(res_id, crew_id, year_start, year_end, surv2,real_wage, real_competing_wage, days_assigned, 
+         cumusum_da,wage_diff, year, agency, GACC, first_year,
+         year_start_reentry_older_cohort, year_end_reentry_older_cohort,
+         year_start_reentry_clock, year_end_reentry_clock) %>%
   mutate(surv2_name = ifelse(surv2 == 1, "Left", "Stayed"))
 
 
@@ -82,52 +90,118 @@ single_day_hours$wage_2023_GS8_step5 * 1.162
 
 
 ################################################################
+### Check PH assumption ###
+################################################################
+
+# original preferred model (no id=res_id) reentry = Shayne's method
+model1 <- coxph(Surv(year_start,year_end,surv2) ~ 
+                  real_competing_wage + days_assigned + cumusum_da + year + agency + GACC,
+                cluster=crew_id,
+                data = reg_dat)
+
+# wage diff instead of competing wage
+model2 <-coxph(Surv(year_start,year_end,surv2) ~ 
+                 wage_diff + days_assigned + cumusum_da + year + agency + GACC,
+               cluster=crew_id,
+               data = reg_dat)
+
+# crew fixed effect (competing wages plus crew id)
+model3 <-coxph(Surv(year_start,year_end,surv2) ~ 
+                 real_competing_wage + days_assigned + cumusum_da + year + agency + GACC + crew_id,
+               data = reg_dat)
+
+
+# diagnostics
+ph_assumption_check1 = ggcoxdiagnostics(model1, type = "schoenfeld")
+ph_assumption_check1
+ggsave(plot = ph_assumption_check1, filename = "analysis/outputs/ph_assumptions1.png",
+       height = 6, width = 10, unit = "in")
+
+ph_assumption_check2 = ggcoxdiagnostics(model2, type = "schoenfeld")
+ph_assumption_check2
+ggsave(plot = ph_assumption_check2, filename = "analysis/outputs/ph_assumptions2.png",
+       height = 6, width = 10, unit = "in")
+
+ph_assumption_check3 = ggcoxdiagnostics(model3, type = "schoenfeld")
+ph_assumption_check3
+ggsave(plot = ph_assumption_check3, filename = "analysis/outputs/ph_assumptions3.png",
+       height = 6, width = 10, unit = "in")
+
+# this test is known to be anti-conservative, so we're not too worried
+# see paragraph in the appendix
+zph <- cox.zph(model1)
+par(mfrow = c(2, 3))
+plot(zph, var = 1, df=3)
+abline(0, 0, lty=3) 
+abline(lm(zph$y[,1] ~ zph$x)$coefficients, lty=4, col=3) 
+plot(zph, var = 2, df=3)
+abline(0, 0, lty=3) 
+abline(lm(zph$y[,2] ~ zph$x)$coefficients, lty=4, col=3) 
+plot(zph, var = 3, df=3)
+abline(0, 0, lty=3) 
+abline(lm(zph$y[,3] ~ zph$x)$coefficients, lty=4, col=3) 
+plot(zph, var = 4, df=3)
+abline(0, 0, lty=3) 
+abline(lm(zph$y[,4] ~ zph$x)$coefficients, lty=4, col=3) 
+plot(zph, var = 5, df=3)
+abline(0, 0, lty=3) 
+abline(lm(zph$y[,5] ~ zph$x)$coefficients, lty=4, col=3) 
+plot(zph, var = 6, df=3)
+abline(0, 0, lty=3) 
+abline(lm(zph$y[,6] ~ zph$x)$coefficients, lty=4, col=3) 
+
+
+################################################################
 ### Alternative model specs (robustness checks) ###
 ################################################################
-rows <- tibble::tribble(~term, ~Bivariate, ~Multivariate,
-                        'Empty row', '-', '-',
-                        'Another empty row', '?', '?')
-
-
+# model1 : the preferred spec in our paper, included for comparison
+model1 <- coxph(Surv(year_start,year_end,surv2) ~ 
+                  real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
+                data = reg_dat, cluster=crew_id) 
 
 # - model 1, no CA data, to ensure CA is not driving the model
 model1_no_CA <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
-                data = reg_dat %>% filter(GACC != "CA-OSCC" & GACC != "CA-ONCC"),cluster=crew_name) 
+                data = reg_dat %>% filter(GACC != "CA-OSCC" & GACC != "CA-ONCC"),cluster=crew_id) 
 
 
 # - model 1, no competing wages (only days assigned and cumulative experience)
 model1_no_comp_wage <- coxph(Surv(year_start,year_end,surv2) ~ days_assigned + cumusum_da + year + agency + GACC, 
-                                            data = reg_dat,cluster=crew_name) 
+                                            data = reg_dat,cluster=crew_id) 
 
 # - model 1, but max earning potential instead of competing wage
 model1_only_max_pot <- coxph(Surv(year_start,year_end,surv2) ~ real_wage + days_assigned + cumusum_da + year + agency + GACC, 
-                             data = reg_dat,cluster=crew_name) 
+                             data = reg_dat,cluster=crew_id) 
 
 # - model 1, but remove everyone who has first year == 2008 (is cum days not adequately capturing human capital b/c dataset is short in relation to careers - cut out everyone whose first year is 2008 - model seems fine)
 model1_no_2008_entry <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
-                          data = reg_dat %>% filter(first_year>2008),cluster=crew_name) 
+                          data = reg_dat %>% filter(first_year>2008),cluster=crew_id) 
 
 model1_no_days_assigned <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + cumusum_da + year + agency + GACC, 
-               data = reg_dat, cluster=crew_name)
+               data = reg_dat, cluster=crew_id)
  
 
-model_list <- list(`1`=model1_no_CA,`2`=model1_no_comp_wage,`3`=model1_only_max_pot, `4`=model1_no_2008_entry, `5`=model1_no_days_assigned)
+model_list <- list(`Model 1`=model1,
+                   `No California`=model1_no_CA,
+                   `No Competing Wage`=model1_no_comp_wage,
+                   `MCEP and No Competing Wage`=model1_only_max_pot, 
+                   `Start date after 2008`=model1_no_2008_entry, 
+                   `No Days Assigned`=model1_no_days_assigned)
 
 
 
-rows <- tibble::tribble(~term, ~M1, ~M2, ~M3, ~M4, ~M5,
-                        'Fixed Effects', '', '', '', '','',
-                        'Agency', 'x', 'x', 'x', 'x','x',
-                        'GACC', 'x', 'x', 'x', 'x','x',
-                        'Crew', '', '', '', '', '')
+rows <- tibble::tribble(~term, ~M1, ~M2, ~M3, ~M4, ~M5, ~M6,
+                        'Fixed Effects', '', '', '', '','','',
+                        'Agency', 'x', 'x', 'x', 'x','x','x',
+                        'GACC', 'x', 'x', 'x', 'x','x','x',
+                        'Crew', '', '', '', '', '','',)
 
-attr(rows, 'position') <- c(21:24) # tells model summary where to put these extra rows
+attr(rows, 'position') <- c(19:22) # tells model summary where to put these extra rows
 
 
 modelsummary(model_list,
              coef_omit = "crew_name|GACC|agency",
              coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (100 days)",
-                          "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
+                          "real_competing_wage"="Competing Wage ($1000)","real_wage"="MCEP ($1000)","wage_diff"="MCEP-Competing Wage ($1000)",
                           "year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
              stars = T,
              title = "Cox PH regression results \\label{tab:main_results}",
@@ -137,20 +211,78 @@ modelsummary(model_list,
              notes = 'Standard errors are clustered at the IH Crew level to account for correlation between crew members.',
              output = "analysis/outputs/robustness_coef_for_supp_mat.tex")
 
-model3_mod <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC + crew_id, 
-                data = reg_dat, cluster=crew_name)
-modelsummary(model3_mod,
-             #coef_omit = "crew_name|GACC|agency",
-             #coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (100 days)",
-            #              "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
-            #              "year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
+
+
+# We did stratify by year to see results given that year is the most eggregious 
+# offender of PH assumptions
+# model 1 stratified by year
+model1_stratified <- coxph(Surv(year_start_reentry_older_cohort,year_end_reentry_older_cohort,surv2) ~ real_competing_wage + days_assigned + cumusum_da + agency + GACC + strata(year), 
+                     data = reg_dat, cluster=crew_id) 
+
+################################################################
+### Alternative model specs (re-entry data structure) ###
+################################################################
+
+# re entry alternative data structures
+
+# original preferred model - reentry was treated as though they'd been there all years
+# we DO NOT SHOW this in the paper as we decided it wasn't the correct structure - it is here only for 
+# internal documentation
+model1_orig <- coxph(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
+                data = reg_dat, cluster=crew_id) 
+
+# model1 : the preferred spec in our paper, included for comparison
+model1 <- coxph(Surv(year_start_reentry_older_cohort,year_end_reentry_older_cohort,surv2) ~ 
+                  real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
+                data = reg_dat, cluster=crew_id) 
+
+# restart the clock (must cluster on res_id)
+model1_clock <- coxph(Surv(year_start_reentry_clock,year_end_reentry_clock,surv2) ~ 
+                        real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
+                      data = reg_dat, cluster=res_id) 
+
+# using surv instead of surv2 - gap is ignored
+model1_no_gap <- coxph(Surv(year_start,year_end,surv) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC, 
+                     data = reg_dat, cluster=crew_id) 
+
+# put res_id and crew_id in random effects structure
+# this takes ~45 minutes to run
+library(coxme)
+model1_coxme <- coxme(Surv(year_start,year_end,surv2) ~ real_competing_wage + days_assigned + cumusum_da + year + agency + GACC +
+                    (1 | res_id) + (1 | crew_id), 
+                  data = reg_dat) 
+
+
+rows <- tibble::tribble(~term, ~M1, ~M2, ~M3, ~M4, ~M5, 
+                        'Fixed Effects', '', '', '','', '',
+                        'Agency', 'x', 'x', 'x','x', 'x',
+                        'GACC',   'x', 'x', 'x','x', 'x',
+                        'Crew',    '',  '',  '', '', '',)
+
+attr(rows, 'position') <- c(21:24)
+
+model_list <- list(`Model 1`=model1,
+                   `Final exit is only exit`=model1_a,
+                   `New entry for each re-entry`=model1_b,
+                   `Random effects of individual and crew`=model1_c,
+                   `cluster crew id,\nid is res id`=model1_d)
+#`frailty res id`=model1_e) #,
+#`coxme crew and res id RE`=model1_e)
+
+modelsummary(model_list,
+             #coef_omit = "crew_name|GACC|year|agency",
+             coef_map = c("days_assigned"="Days Assigned","cumusum_da"="Cumulative Experience (100 days)",
+                          "real_competing_wage"="Competing Wage ($1000)","real_wage"="FF Wage ($1000)","wage_diff"="FF-Competing Wage ($1000)",
+                          "year2013"="Year 2013","year2014"="Year 2014","year2015"="Year 2015","year2016"="Year 2016","year2017"="Year 2017","year2018"="Year 2018"),
              stars = T,
              title = "Cox PH regression results \\label{tab:main_results}",
              statistic = "robust.se",
              gof_omit = "AIC|RMSE",
-             #add_rows = rows,
-             notes = 'Standard errors are clustered at the IH Crew level to account for correlation between crew members.',
-             output = "analysis/outputs/main_result_tab_full_coef_for_supp_mat.tex")
+             add_rows = rows,
+             notes = 'Standard errors are clustered at the IHC level to account for correlation between crew members, except for the third and fifth columns.')#,
+#output = "analysis/outputs/main_result_tab.tex")
+
+
 
 ################################################################
 ### Data histograms ###
@@ -241,6 +373,14 @@ cum_sum_final_yr = ggplot(data = reg_dat %>% mutate(GACC_name = GACC_abb_to_full
   geom_histogram(aes(x=cumusum_da, fill = GACC_name)) +
   scale_fill_viridis_d() +
   labs(y="count", x = "Cumulative Experience (days)", fill = "Geographic Area") +
+  theme_bw()+
+  theme(legend.position = "none")  +
+  facet_grid(rows = vars(surv2_name))
+
+wage_diff_hist = ggplot(data = reg_dat %>% mutate(GACC_name = GACC_abb_to_full_name(GACC)) ) +
+  geom_histogram(aes(x=wage_diff, fill = GACC_name)) +
+  scale_fill_viridis_d() +
+  labs(y="count", x = "Wage Difference (MCEP-Competing Wage; $1000)", fill = "Geographic Area") +
   theme_bw()+
   theme(legend.position = "none")  +
   facet_grid(rows = vars(surv2_name))
@@ -680,8 +820,59 @@ ggsave(plot = total_by_yr, filename = "graphs/IHC personnel by yr_v2.png",
        height = 4, width = 12)
 
 
+###################################################
+### Models we tested prior to finalizing the spec (reentry and random effects)
+### Plus some notes
+###################################################
 
 
+# We tested a plain Anderson-Gill model, a frailty model, a model clustered on crew id (model1),
+# a model with random effects for res_id only (basically frailty), a model with random
+# effects for both crew and res id (mixed effects, must use coxme). All of those gave 
+# near identical estimates of coefficients and standard errors. The specifications with 
+# MCEP as the wage measure are shown below
+
+a_g_model = coxph(Surv(year_start,year_end,surv2) ~ 
+                    real_wage + days_assigned + cumusum_da + year + agency + GACC,
+                  data = reg_dat)
+a_g_cluster_crew_id = coxph(Surv(year_start,year_end,surv2) ~ 
+                              real_wage + days_assigned + cumusum_da + year + agency + GACC,
+                            cluster = crew_id,
+                            data = reg_dat)
+frailty_model = coxph(Surv(year_start,year_end,surv2) ~ 
+                        real_wage + days_assigned + cumusum_da + year + agency + GACC + frailty(res_id),
+                      data = reg_dat)
+random_effects_res_only = coxme(Surv(year_start,year_end,surv2) ~ 
+                                  real_wage + days_assigned + cumusum_da + year + agency + GACC +
+                                  (1 | res_id), 
+                                data = reg_dat) 
+random_effects_res_and_crew = coxme(Surv(year_start,year_end,surv2) ~ 
+                                      real_wage + days_assigned + cumusum_da + year + agency + GACC +
+                                      (1 | res_id) + (1 | crew_id), 
+                                    data = reg_dat) 
+
+# original preferred model (no id=res_id) reentry = Shayne's method, 
+# crew and res id as random effects
+model1 <- coxme(Surv(year_start,year_end,surv2) ~ 
+                  real_competing_wage + days_assigned + cumusum_da + year + agency + GACC +
+                  (1 | res_id) + (1 | crew_id), 
+                data = reg_dat) 
+# save the models, since they now take quite a while to run
+saveRDS(model1, "analysis/outputs/model1.rds")
+
+# wage diff instead of competing wage
+model2 <- coxme(Surv(year_start,year_end,surv2) ~ 
+                  wage_diff + days_assigned + cumusum_da + year + agency + GACC +
+                  (1 | res_id) + (1 | crew_id), 
+                data = reg_dat) 
+saveRDS(model2, "analysis/outputs/model2.rds")
+
+# MCEP rather than competing wage
+model3 <- coxme(Surv(year_start,year_end,surv2) ~ 
+                  real_wage + days_assigned + cumusum_da + year + agency + GACC + 
+                  (1 | res_id) + (1 | crew_id), 
+                data = reg_dat) 
+saveRDS(model3, "analysis/outputs/model3.rds")
 
 
 

@@ -8,50 +8,31 @@
 
 sm_data <- read.csv(file = "build/cache/prd_deflated_wages.csv") %>%
   janitor::clean_names()
+dataset = sm_data
 
-# for survival model -From Jude (start year/end year)
-sm_data$year_end <- (sm_data$year-sm_data$first_year)+1
-sm_data$year_start <- (sm_data$year-sm_data$first_year)
-dataset <- sm_data
-
-###
-##
-# this is to compute the surv for multiple exits and entries 
-#dataset <- dataset %>%
-#  group_by(res_id) %>%
-#  arrange(year, .by_group = TRUE) %>%
-#  mutate(yearminusyear = lead(year,k=1, default = first(year)) - year)
-
-#dataset$residDIFF <- ave(dataset$res_id, FUN = function(x) c(diff(x),0))
-
-#dataset$skipyear <- ifelse(dataset$yearminusyear>1 & dataset$residDIFF==0,1,0)
-
-#dataset$surv2 <- dataset$skipyear+dataset$surv
-#
-##
-###
-
+# year start and year end (i.e., t0 and t1) calculations are now in script 01_personnel_retention_data
 # remove 2019 year, SAC, EACC, Alaska State, and Utah State
 dataset <- dataset[dataset$year!=2019,]
 dataset <- dataset[dataset$gacc_x!="GA-SAC",]
 dataset <- dataset[dataset$gacc_x!="WI-EACC",]
+dataset <- dataset[dataset$gacc_x!="AK-ACC",]
 dataset <- dataset[dataset$agency!="Alaska State",]
 dataset <- dataset[dataset$agency!="Utah State",]
 
 # average days assigned = cumulative days/cumulative years
 dataset$AverageDaysAssigned <- dataset$cumusum_da/dataset$cumusum_year
 dataset$AverageDaysAssignedROUND <- plyr::round_any(dataset$AverageDaysAssigned, 10, f = ceiling)
-dataset <- dataset[dataset$AverageDaysAssigned<159,]
+#dataset <- dataset[dataset$AverageDaysAssigned<159,] taken out March 2023
 dataset$AverageDaysAssignedROUND <- base::factor(dataset$AverageDaysAssignedROUND)
-dataset$days_assigned <- plyr::round_any(dataset$days_assigned, 10, f = ceiling)
-dataset <- dataset[dataset$days_assigned<160,]
+#dataset$days_assigned <- plyr::round_any(dataset$days_assigned, 10, f = ceiling) # taken out March 23, 2023
+#dataset <- dataset[dataset$days_assigned<160,] # taken out March 2023
 
 dataset$med_wageCOPY <- dataset$med_wage
 
 # round cumulative days to nearest 100 and remove <1100 cumulative days
 # it is one sample and causes the model to fail
 dataset$cumulativedaysROUND <- plyr::round_any(dataset$cumusum_da, 100, f = floor)  
-dataset <- dataset[dataset$cumulativedaysROUND<800,]
+#dataset <- dataset[dataset$cumulativedaysROUND<800,] changed March 23, 2023
 dataset$cumulativedaysROUND <- factor(dataset$cumulativedaysROUND)
 dataset$year <- base::factor(dataset$year)
 dataset$med_wage <- plyr::round_any(dataset$med_wage, 10000, f = ceiling) 

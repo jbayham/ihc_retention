@@ -5,7 +5,10 @@
 ################################################################################
 #library(cartography)
 
-dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSURV.rds")
+# I think this file was misnammed - changed March 23, 2023
+#dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSURV.rds")
+dataPRD3 <- readRDS(file = "build/cache/dataPRD_wSalary.rds")
+
 
 #Using package quantmod to pull the CPI series from FRED (St Louis Fed database)
 getSymbols("CPIAUCSL", src='FRED') #Note this creates an object called CPIAUSL
@@ -35,6 +38,9 @@ deflated_prd <- dataPRD3 %>%
 
 #Cache dataset
 write_csv(deflated_prd, file = "build/cache/prd_deflated_wages.csv")
+
+remove <- c("avg_cpi","CPIAUCSL","dataPRD3", "deflated_prd", "remove")
+rm(list = remove)
 
 ################################################################################
 ################################################################################
